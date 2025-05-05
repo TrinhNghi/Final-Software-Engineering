@@ -103,7 +103,7 @@
     backdrop-filter: blur(10px); /* Increased blur for better effect */
     border-radius: 20px;
     width: 100%;
-    max-width: 320px; /* Slightly wider form */
+    max-width: 500px; /* Slightly wider form */
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); /* Deeper shadow for the form */
     padding: 30px 20px; /* Increased padding for more spacing */
     border-radius: 1;
@@ -172,7 +172,7 @@
     right: 0;
     bottom: 0;
     left: 0;
-    background: linear-gradient(to right, rgba(0, 0, 0, 0) 10%, rgba(232, 211, 192, 1) 100%);
+    background: linear-gradient(to right, rgba(0, 0, 0, 0) 50%, rgba(232, 211, 192, 1) 100%);
     z-index: 1;
 }
 
@@ -181,11 +181,11 @@
 <body>
 <div class="container-fluid vh-100 d-flex p-0">
     <!-- Left image side -->
-    <div class="col-8 d-none d-md-block p-0 position-relative">
-    <div class="left-text-overlay">
+    <div class="col-4 d-none d-md-block p-0 position-relative">
+    <!--<div class="left-text-overlay">
         <h1>Welcome to Peace Home</h1>
         <p>A cozy and tranquil getaway in the heart of Vietnam. Make yourself at home while discovering the culture and charm of the surroundings.</p>
-    </div>
+    </div>-->
     <div class="h-100 w-100 bg-image position-relative">
         <div class="image-overlay"></div>
     </div>
@@ -193,7 +193,7 @@
 
 
 <!-- Right form side -->
-<div class="col-4 d-flex align-items-center justify-content-center gradient-bg">
+<div class="col-8 d-flex align-items-center justify-content-center gradient-bg">
     <div class="login-box p-4">
         <h3 class="text-center text-dark mb-4">User Login</h3>
         <form method="post" action="">

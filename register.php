@@ -82,81 +82,98 @@
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
     <style>
-        .bg {
-            background: #eceb7b;
-        }
+        .gradient-bg {
+            background: 	#A87E62;
+background: linear-gradient(90deg, rgba(168, 126, 98, 1) 0%, rgba(217, 183, 158, 1) 41%, rgba(221, 191, 168, 1) 65%, rgba(235, 223, 204, 1) 100%);
+    width: 100%;
+    height: 100vh;
+}
+
+.register-box {
+    background-color: white;
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: rgb(77, 38, 38) 0px 20px 30px -10px;
+    padding: 30px 20px;
+}
+
+.form-control {
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #6a1000;
+    border-radius: 10px;
+}
+
+.form-control:focus {
+    border-color: #6a1000;
+    box-shadow: 0 0 5px rgba(106, 16, 0, 0.8);
+}
+
+.btn-success {
+    background-color: #6a1000;
+    border-color: #6a1000;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #5a0e00;
+    border-color: #5a0e00;
+}
+
+.text-primary {
+    color: #5a0e00 !important;
+}
+
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-xl-5 col-lg-6 col-md-8 border my-5 p-4 rounded mx-3">
-                <h3 class="text-center text-secondary mt-2 mb-3 mb-3">Create a new account</h3>
-                <form method="post" action="" novalidate>
-                    <div class="form-row">
-                        <div class="form-group col-md-6">
-                            <label for="firstname">First name</label>
-                            <input value="<?= $first_name?>" name="first" required class="form-control" type="text" placeholder="First name" id="firstname">
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label for="lastname">Last name</label>
-                            <input value="<?= $last_name?>" name="last" required class="form-control" type="text" placeholder="Last name" id="lastname">
-                            <div class="invalid-tooltip">Last name is required</div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input value="<?= $email?>" name="email" required class="form-control" type="email" placeholder="Email" id="email">
-                    </div>
-                    <div class="form-group">
-                        <label for="user">Username</label>
-                        <input value="<?= $user?>" name="user" required class="form-control" type="text" placeholder="Username" id="user">
-                        <div class="invalid-feedback">Please enter your username</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="pass">Password</label>
-                        <input  value="<?= $pass?>" name="pass" required class="form-control" type="password" placeholder="Password" id="pass">
-                        <div class="invalid-feedback">Password is not valid.</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="pass2">Confirm Password</label>
-                        <input value="<?= $pass_confirm?>" name="pass-confirm" required class="form-control" type="password" placeholder="Confirm Password" id="pass2">
-                        <div class="invalid-feedback">Password is not valid.</div>
-                    </div>
-
-                    <div class="form-group">
-                        <?php
-                            if (!empty($error)) {
-                                echo "<div class='alert alert-danger'>$error</div>";
-                            }
-                            if (!empty($success)) {
-                                echo "<div class='alert alert-success'>$success</div>";
-                            }
-                        ?>
-                        <button type="submit" class="btn btn-success px-5 mt-3 mr-2">Register</button>
-                        <button type="reset" class="btn btn-outline-success px-5 mt-3">Reset</button>
-                    </div>
-                    <div class="form-group">
-                        <p>Already have an account? <a href="login.php">Login</a> now.</p>
-                    </div>
-                </form>
-
+<div class="container-fluid vh-100 d-flex justify-content-center align-items-center gradient-bg">
+    <div class="register-box p-4">
+        <h3 class="text-center text-dark mb-4">Create a New Account</h3>
+        <form method="post" action="" novalidate>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="firstname" class="text-dark">First Name</label>
+                    <input value="<?= $first_name?>" name="first" required class="form-control" type="text" placeholder="First name" id="firstname">
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="lastname" class="text-dark">Last Name</label>
+                    <input value="<?= $last_name?>" name="last" required class="form-control" type="text" placeholder="Last name" id="lastname">
+                </div>
             </div>
-        </div>
-
+            <div class="form-group">
+                <label for="email" class="text-dark">Email</label>
+                <input value="<?= $email?>" name="email" required class="form-control" type="email" placeholder="Email" id="email">
+            </div>
+            <div class="form-group">
+                <label for="user" class="text-dark">Username</label>
+                <input value="<?= $user?>" name="user" required class="form-control" type="text" placeholder="Username" id="user">
+            </div>
+            <div class="form-group">
+                <label for="pass" class="text-dark">Password</label>
+                <input value="<?= $pass?>" name="pass" required class="form-control" type="password" placeholder="Password" id="pass">
+            </div>
+            <div class="form-group">
+                <label for="pass2" class="text-dark">Confirm Password</label>
+                <input value="<?= $pass_confirm?>" name="pass-confirm" required class="form-control" type="password" placeholder="Confirm Password" id="pass2">
+            </div>
+            <div class="form-group">
+                <?php if (!empty($error)): ?>
+                    <div class='alert alert-danger'><?= $error ?></div>
+                <?php endif; ?>
+                <?php if (!empty($success)): ?>
+                    <div class='alert alert-success'><?= $success ?></div>
+                <?php endif; ?>
+                <button type="submit" class="btn btn-success w-100">Register</button>
+            </div>
+            <div class="form-group text-center">
+                <p class="text-dark">Already have an account? <a href="login.php" class="text-primary">Login</a>.</p>
+            </div>
+        </form>
     </div>
-    <script>
-    $(document).ready(function(){
-        $('button[type="reset"]').click(function(e){
-            e.preventDefault(); 
-
-            $('form input').val('');
-
-            $('form')[0].reset();
-        });
-    });
-    </script>
-
+</div>
 </body>
+
 </html>
 
