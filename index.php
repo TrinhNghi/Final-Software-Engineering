@@ -31,6 +31,24 @@ session_start();
             border-radius: 15px;
             background-color: blue;
         }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .gallery img {
+            width: 100%;
+            height: auto;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .gallery img:hover {
+            transform: scale(1.1);
+        }
     </style>
 
 
@@ -40,16 +58,18 @@ session_start();
 
 
     <nav class="navbar navbar-expand-lg navbar-light bg-light"
-        style="padding: 20px;width:100%;position: fixed;opacity:0.9;z-index: 1;height:50px;">
-        <center><button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo03"
+        style="padding: 20px; width: 100%; position: fixed; opacity: 0.9; z-index: 1000; height: 50px;">
+        <center>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo03"
                 aria-controls="navbarTogglerDemo03" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <a class="navbar-brand" href="HMS.html"
-                style="text-align: center; margin-bottom: 5px; padding-left: 100px; padding-right: 150px;"><i
-                    class="material-icons"
+                style="text-align: center; margin-bottom: 5px; padding-left: 100px; padding-right: 150px;">
+                <i class="material-icons"
                     style="font-size: 30px; color:  #c68c53; text-align: center;padding: 5px;vertical-align: text-bottom;">hotel</i>
-                HOTEL MANAGEMENT SYSTEM</a>
+                HOTEL MANAGEMENT SYSTEM
+            </a>
         </center>
         <button id="Historybtn">
             Scrollll
@@ -58,7 +78,7 @@ session_start();
 
     <!-- Static Section -->
     <div class="jumbotron text-overlay"
-        style="background-color: transparent; color: #8B4513; text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; padding: 20px;">
+        style="background-color: transparent; color: #c68c53 ; text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; padding: 20px;">
         <h1 class="display-3" style="font-family: 'Playfair Display', serif; font-weight: bold;">
             <b>Peace Home</b>
         </h1>
@@ -68,28 +88,28 @@ session_start();
             Sapa</p>
         <a href="Signup.html">
             <button class="button1"
-                style="background-color: #8B4513; color: white; border: none; padding: 10px 20px; font-size: 1.2rem; border-radius: 10px; transition: 0.3s;">
+                style="background-color: #c68c53 ; color: white; border: none; padding: 10px 20px; font-size: 1.2rem; border-radius: 10px; transition: 0.3s;">
                 Join Us Today!
             </button>
         </a>
     </div>
 
     <!-- Carousel Section -->
-    <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel" style="width: 100%; position: relative;">
-        <ol class="carousel-indicators">
-            <li data-target="#carouselExampleIndicators" data-slide-to="0" class="active"></li>
-            <li data-target="#carouselExampleIndicators" data-slide-to="1"></li>
-            <li data-target="#carouselExampleIndicators" data-slide-to="2"></li>
-        </ol>
+    <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel" data-interval="3000"
+        style="width: 100%; position: relative;">
+        <!-- Removed the indicators -->
         <div class="carousel-inner">
             <div class="carousel-item active">
-                <img class="d-block w-100" src="images/img1.jpg" alt="First slide" style="height: 700px; filter: blur(5px);">
+                <img class="d-block w-100" src="images/img1.jpg" alt="First slide"
+                    style="height: 700px; filter: blur(5px);">
             </div>
             <div class="carousel-item">
-                <img class="d-block w-100" src="images/img2.jpg" alt="Second slide" style="height: 700px; filter: blur(5px);">
+                <img class="d-block w-100" src="images/img2.jpg" alt="Second slide"
+                    style="height: 700px; filter: blur(5px);">
             </div>
             <div class="carousel-item">
-                <img class="d-block w-100" src="images/img3.jpg" alt="Third slide" style="height: 700px; filter: blur(5px);">
+                <img class="d-block w-100" src="images/img3.jpg" alt="Third slide"
+                    style="height: 700px; filter: blur(5px);">
             </div>
         </div>
         <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
@@ -102,186 +122,293 @@ session_start();
 
     <div
         style="background-color: #F0F8FF; padding: 100px; letter-spacing: 1.5px; line-height: 30px; text-align: center; padding-left: 300px; padding-right: 300px;">
-        <h1 style="font-family: initial; line-height: 100px">Exprience an exclusicve hospitality</h1>
-        <p style="font-family: Arial;"> Embark on a journey you will never forget at the first luxury boutique resort
-            with pivete beach access overlooking the beautiful island. We assure you an unforgettable exprience,
-            bringing back with you many incredible memories.<br><b>&#9883; &#x269B; &#9883;</p>
+        <h1 style="font-family: initial; line-height: 100px">Welcome to Peace Home!</h1>
+        <p style="font-family: Arial;"> Peace Home is located in Su Pan, a small village sourrounded by nature and rice
+            fields in the area of Sa Pa. We are located 10 km away from Sa Pa town (about 30 minutes drive, or 3 hours
+            walk).
+
+            If you are looking for a peaceful place, far from the city buzz, with fresh air and hiking trails, then
+            Peace Home is the place for you!<br><b>&#9883; &#x269B; &#9883;</p>
     </div>
 
-    <div class="row" style="background-color: #c68c53; padding: 60px; width: 100%; margin-left: 2px">
-        <div class="column" style="float: left; padding-left: 250px"><img src="image\11.jpg"
-                style="width: 450px; height: 275px"></div>
-        <div style="float: left; width:40%; padding-left: 70px">
-            <h2 style="font-family: Times New Roman; color: white;">A refreshing and unique feel to the face of
-                hospitality</h2>
-            <p style="color: white; font-weight: 1">While preserving the mature tree canopy atop the seaside cliff
-                facing out to island, the 23 suites provide a refreshing and unique feel to the face of hospitality.</p>
-        </div>
+    <div class="row" style="background-color: #c68c53; padding: 60px; width: 100%;">
 
-        <div class="column"
-            style="float: left; padding-left: 225px; width: 46%; padding-top: 40px; text-align: right; padding-right: 25px">
-            <h2 style="font-family: Times New Roman; color: white;">Designed with contemporary approach</h2>
-            <p style="color: white; font-weight: 1">All suites are designed with contemporary approach and an open space
-                concept, complemented with accents of pure luxury and style. Each of the 16 garden suites, 3 sea breeze
-                suites and 4 canopy suites attributes unique touches and amenities.</p>
-            <button id="button1" data-toggle="modal" data-target="#exampleModalLong"
-                style="background-color:#c68c53; color: white; text-align: center; transition-duration: 0.4s;"><a
-                    href="#" style="color: white; text-decoration: none;">EXPLORE ALL OUR ROOMS</a></button>
-
-            <!--Modal-->
-            <div class="modal fade" id="exampleModalLong" tabindex="-1" role="dialog"
-                aria-labelledby="exampleModalLongTitle" aria-hidden="true">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="exampleModalLongTitle">Rooms</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="container-fluid" style="text-align: left;">
-                                <div class="row">
-                                    <h5>Standard Room- One king bed</h5>
-                                    <div class="col"><img src="image\3.jpg" style="width: 300px; height: 200px"></div>
-                                </div><br>
-                                <div class="row">
-                                    <h5>Superior Room- Two double beds</h5>
-                                    <div class="col"><img src="image\bed\5.jpg" style="width: 300px; height: 200px">
-                                    </div>
-                                </div><br>
-                                <div class="row">
-                                    <h5>Junior Suit- One single bed</h5>
-                                    <div class="col"><img src="image\bed\4.jpg" style="width: 300px; height: 200px">
-                                    </div>
-                                </div><br>
-                                <div class="row">
-                                    <h5>Grand Superior Room- Two king beds</h5>
-                                    <div class="col"><img src="image\bed\3.jpg" style="width: 300px; height: 200px">
-                                    </div>
-                                </div><br>
-                                <div class="row">
-                                    <h5>Superior Room- One king bed</h5>
-                                    <div class="col"><img src="image\bed\2.jpg" style="width: 300px; height: 200px">
-                                    </div>
-                                </div><br>
-                                <div class="row">
-                                    <h5>Delux Room- One king bed</h5>
-                                    <div class="col"><img src="image\21.jpg" style="width: 300px; height: 200px"></div>
-                                </div><br>
-                                <div class="row">
-                                    <h5>Family Special- Three double beds</h5>
-                                    <div class="col"><img src="image\bed\5.jpg" style="width: 300px; height: 200px">
-                                    </div>
-                                </div><br>
-                                <div class="row">
-                                    <h5>Premium Room- Two single beds</h5>
-                                    <div class="col"><img src="image\bed\3.jpg" style="width: 300px; height: 200px">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+        <!-- Room and Services (Carousel) -->
+        <div class="column" style="float: left; padding-left: 250px;">
+            <div id="roomCarousel" class="carousel slide" data-ride="carousel" data-interval="2000">
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <img src="images/room1.png" class="d-block" style="width: 450px; height: 275px;">
+                    </div>
+                    <div class="carousel-item">
+                        <img src="images/room2.png"  class="d-block" style="width: 450px;height: 275px;">
+                    </div>
+                    <div class="carousel-item">
+                        <img src="images/room3.png"  class="d-block" style="width: 450px; height: 275px;">
                     </div>
                 </div>
             </div>
         </div>
-        <div style="float: left; padding-left: 40px; padding-top: 50px"><img src="image\16.jpg"
-                style="width: 450px; height: 275px"></div>
+        <div style="float: left; width:40%; padding-left: 70px">
+            <h2 style="font-family: Times New Roman; color: white;">Everything You Need at Peace Home</h2>
+            <p style="color: white; font-weight: 1">
+                Peace Home has all the services you may need: a delicious restaurant open all day, a beautiful garden
+                where
+                you can make a campfire at night, a swimming pool in the summer, hot medicinal herbal baths, laundry
+                service,
+                tours and trekking, bus tickets, motorbike rental, and much more.
+            </p>
+        </div>
+
+        <!-- Restaurant -->
+        <div class="column"
+            style="float: left; padding-left: 225px; width: 46%; padding-top: 40px; text-align: right; padding-right: 25px">
+            <h2 style="font-family: Times New Roman; color: white;">Restaurant</h2>
+            <p style="color: white; font-weight: 1">
+                Peace Home’s restaurant, Muong Hoa Food & Drink, offers a delightful blend of Vietnamese and Western
+                cuisine in
+                a warm, homely setting. Savor authentic local flavors like phở, spring rolls, hotpots, fried rice,
+                noodles,
+                tofu, fragrant chicken curry, and much more – or indulge in comforting Western favorites such as
+                homemade
+                burgers with crispy fries, french crepes, and our customer’s favorite pumpkin soup. Don’t miss our
+                signature
+                banana cakes and homemade peanut butter! Whether you’re craving tradition or a taste of home, every dish
+                is
+                made with fresh ingredients and a touch of love.
+            </p>
+        </div>
+        <div style="float: left; padding-left: 40px; padding-top: 50px">
+            <img src="images/restaurant.png" style="width: 450px; height: 275px">
+        </div>
+
+        <!-- Herbal Bath -->
+        <div class="column" style="float: left; padding-left: 250px">
+            <img src="images/herbalbath.png" style="width: 450px; height: 275px">
+        </div>
+        <div style="float: left; width:40%; padding-left: 70px">
+            <h2 style="font-family: Times New Roman; color: white;">Traditional Red Dao Herbal Bath</h2>
+            <p style="color: white; font-weight: 1">
+                At Peace Home, you have the possibility to immerse yourself in the traditional Red Dao herbal bath, a
+                time-honored wellness practice in Sapa. This therapeutic bath combines a variety of medicinal plants,
+                carefully selected and harvested from the lush forests surrounding the region. The herbs are
+                meticulously
+                prepared and boiled to extract their beneficial properties, creating a soothing infusion that addresses
+                various health concerns.
+            </p>
+        </div>
+
+        <!-- Animal Helpers -->
+        <div class="column"
+            style="float: left; padding-left: 225px; width: 46%; padding-top: 40px; text-align: right; padding-right: 25px">
+            <h2 style="font-family: Times New Roman; color: white;">Animal Helpers</h2>
+            <p style="color: white; font-weight: 1">
+                At Peace Home, you may be greeted or even guided by our beloved animal companions! Our friendly pets not
+                only
+                bring joy to the atmosphere but also interact warmly with guests, sometimes even helping staff make you
+                feel
+                at home. Whether it’s a wagging tail or a curious meow, our animal helpers are part of the Peace Home
+                family.
+            </p>
+        </div>
+        <div style="float: left; padding-left: 40px; padding-top: 50px">
+            <img src="images/pet.png" style="width: 450px; height: 275px">
+        </div>
+
     </div>
 
-    <div class="row" style="width: 100%; margin-left: 2px; background-color: #F0F8FF; ">
-        <div class="col-sm-5"
-            style=" padding-left: 100px; padding-right: 30px; padding-top: 30px; padding-bottom: 20px;">
-            <h3 style="font-family: initial;">Gallery</h3>
+    <!-- Gallery Section -->
+    <div class="row"
+        style="margin: 0; background-color: #F0F8FF; display: flex; justify-content: center; align-items: center;">
+        <div class="" style="padding-left: 100px; padding-right: 30px; padding-top: 30px; padding-bottom: 20px;">
+            <h3 style="font-family: initial; text-align: center;">Gallery</h3>
+
+            <!-- Gallery Images -->
+            <div class="row" style="padding-left: 5px">
+                <div class="col-sm-4" style="padding: 5px">
+                    <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="0">
+                        <img src="images/image1.jpg" style="width: 240px; height: 150px;">
+                    </a>
+                </div>
+                <div class="col-sm-4" style="padding: 5px">
+                    <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="1">
+                        <img src="images/image2.jpg" style="width: 240px; height: 150px;">
+                    </a>
+                </div>
+                <div class="col-sm-4" style="padding: 5px">
+                    <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="2">
+                        <img src="images/image3.jpg" style="width: 240px; height: 150px;">
+                    </a>
+                </div>
+            </div>
 
             <div class="row" style="padding-left: 5px">
                 <div class="col-sm-4" style="padding: 5px">
-                    <a href="image\2.jpg" target="_blank"><img src="image\2.jpg"
-                            style="width: 160px; height: 100px;"></a>
+                    <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="3">
+                        <img src="images/image4.jpg" style="width: 240px; height: 150px;">
+                    </a>
                 </div>
                 <div class="col-sm-4" style="padding: 5px">
-                    <a href="image\24.jpg" target="_blank"><img src="image\24.jpg"
-                            style="width: 160px; height: 100px;"></a>
+                    <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="4">
+                        <img src="images/image5.jpg" style="width: 240px; height: 150px;">
+                    </a>
                 </div>
                 <div class="col-sm-4" style="padding: 5px">
-                    <a href="image\13.jpg" target="_blank"><img src="image\13.jpg"
-                            style="width: 160px; height: 100px;"></a>
+                    <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="5">
+                        <img src="images/image6.jpg" style="width: 240px; height: 150px;">
+                    </a>
                 </div>
             </div>
 
             <div class="row" style="padding-left: 5px">
                 <div class="col-sm-4" style="padding: 5px">
-                    <a href="image\23.jpg" target="_blank"><img src="image\23.jpg"
-                            style="width: 160px; height: 100px;"></a>
+                    <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="6">
+                        <img src="images/image7.jpg" style="width: 240px; height: 150px;">
+                    </a>
                 </div>
                 <div class="col-sm-4" style="padding: 5px">
-                    <a href="image\9.jpg" target="_blank"><img src="image\9.jpg"
-                            style="width: 160px; height: 100px;"></a>
+                    <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="7">
+                        <img src="images/image8.png" style="width: 240px; height: 150px;">
+                    </a>
                 </div>
                 <div class="col-sm-4" style="padding: 5px">
-                    <a href="image\10.jpg" target="_blank"><img src="image\10.jpg"
-                            style="width: 160px; height: 100px;"></a>
-                </div>
-            </div>
-
-            <div class="row" style="padding-left: 5px">
-                <div class="col-sm-4" style="padding: 5px">
-                    <a href="image\22.jpg" target="_blank"><img src="image\22.jpg"
-                            style="width: 160px; height: 100px;"></a>
-                </div>
-                <div class="col-sm-4" style="padding: 5px">
-                    <a href="image\8.jpg" target="_blank"><img src="image\8.jpg"
-                            style="width: 160px; height: 100px;"></a>
-                </div>
-                <div class="col-sm-4" style="padding: 5px">
-                    <a href="image\17.jpg" target="_blank"><img src="image\17.jpg"
-                            style="width: 160px; height: 100px;"></a>
+                    <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="8">
+                        <img src="images/image9.png" style="width: 240px; height: 150px;">
+                    </a>
                 </div>
             </div>
 
         </div>
-        <div class="col-sm-3" style=" padding-left: 20px; padding-top: 30px; padding-bottom: 20px;">
-            <h3 style="font-family: initial;">Video Tour</h3>
-            <video controls preload muted style="height:225px; width:350px;">
-                <source src="image\Malak Regency a Luxury Hotel (promo video English).mp4" type="video/mp4">
-            </video>
-            <h4 style="font-weight: 1">Conference on Human Health</h4>
-            <p style="font-weight: 1">All suites are designed with contemporary approach and an open space concept.</p>
-        </div>
-        <div class="col-sm-4" style=" padding-left: 40px; padding-top: 30px; padding-bottom: 20px">
-            <h3 style="font-family: initial;">Happenings</h3>
-            <div style="width:400px; height: 300px; overflow: auto; text-align: left;">
-                <div style="border-bottom: 1px solid" id="History">
-                    <h4>Conference on Human Health</h4><br>
-                    <p style="font-weight: 1">All suites are designed with contemporary approach and an open space
-                        concept, complemented with accents of pure luxury and style.</p>
+
+    </div>
+
+    <!-- Modal -->
+    <!-- Modal for Fullscreen Image Carousel -->
+    <div class="modal fade" id="imageModal" tabindex="-1" role="dialog" aria-labelledby="imageModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document" style="max-width: 960px; max-height: 600px;">
+            <div class="modal-content" style="height: 600px;">
+                <div class="modal-header border-0">
+                    <button type="button" class="close ml-auto" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
-                <div style="border-bottom: 1px solid">
-                    <h4>National Conference on ‘Contemporary Perspectives in Design and Creative Arts’</h4><br>
-                    <p style="font-weight: 1">All suites are designed with contemporary approach and an open space
-                        concept, complemented with accents of pure luxury and style.</p>
-                </div>
-                <div style="border-bottom: 1px solid">
-                    <h4> North-India’s biggest Women Entrepreneurship event ‘The Enterprising SHE’</h4><br>
-                    <p style="font-weight: 1">We recently had an event/submit in which all future Entrepreneur met up
-                        and enhance their visions to plan their career.</p>
+                <div class="modal-body p-0" style="height: calc(100% - 56px); overflow: hidden;">
+                    <div id="carouselExample" class="carousel slide h-100" data-ride="carousel">
+                        <div class="carousel-inner h-100">
+                            <div class="carousel-item active h-100">
+                                <img src="images/image1.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                    alt="Image 1">
+                            </div>
+                            <div class="carousel-item h-100">
+                                <img src="images/image2.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                    alt="Image 2">
+                            </div>
+                            <div class="carousel-item h-100">
+                                <img src="images/image3.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                    alt="Image 3">
+                            </div>
+                            <div class="carousel-item h-100">
+                                <img src="images/image4.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                    alt="Image 4">
+                            </div>
+                            <div class="carousel-item h-100">
+                                <img src="images/image5.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                    alt="Image 5">
+                            </div>
+                            <div class="carousel-item h-100">
+                                <img src="images/image6.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                    alt="Image 6">
+                            </div>
+                            <div class="carousel-item h-100">
+                                <img src="images/image7.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                    alt="Image 7">
+                            </div>
+                            <div class="carousel-item h-100">
+                                <img src="images/image8.png" class="d-block w-100 h-100 object-fit-contain"
+                                    alt="Image 8">
+                            </div>
+                            <div class="carousel-item h-100">
+                                <img src="images/image9.png" class="d-block w-100 h-100 object-fit-contain"
+                                    alt="Image 9">
+                            </div>
+                        </div>
+                        <a class="carousel-control-prev" href="#carouselExample" role="button" data-slide="prev"
+                            style="width: 5%;">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="sr-only">Previous</span>
+                        </a>
+                        <a class="carousel-control-next" href="#carouselExample" role="button" data-slide="next"
+                            style="width: 5%;">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="sr-only">Next</span>
+                        </a>
+                    </div>
                 </div>
             </div>
-
         </div>
     </div>
 
-    <div
-        style="background-color: #c68c53; font-family: initial; text-align: center; padding: 100px; width: 100%; color: white;">
-        <h1>Our Location</h1>
-        <p>Visit us at our location for an unforgettable experience!</p>
-        <div style="width: 100%; height: 400px;">
-            <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3717.047482477723!2d103.9198331!3d22.2948518!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x36cd38ac38ebcdb3%3A0x35cd8e71fd74319c!2sAn%20B%C3%ACnh%20Home!5e0!3m2!1sen!2s!4v1680000000000!5m2!1sen!2s"
-                width="100%" height="400" style="border:0;" allowfullscreen="" loading="lazy">
-            </iframe>
-        </div>
+
+
     </div>
+
+    <footer
+        style="background-color: #c68c53; font-family: initial; text-align: center; padding: 40px 20px; width: 100%; color: white;">
+        <h1 style="font-size: 1.8rem; margin-bottom: 20px;">Our Location</h1>
+        <p style="margin-bottom: 30px;">Visit us at our location for an unforgettable experience!</p>
+
+        <div class="container">
+            <div class="row">
+                <!-- Contact Info -->
+                <div class="col-md-4 mb-4 text-start">
+                    <!-- Social Media Icons -->
+                    <div style="margin-bottom: 20px;">
+                        <a href="https://www.facebook.com/PeacehomeSapa/" target="_blank"
+                            style="display: inline-block; margin-right: 10px;">
+                            <img src="images/Facebook_Logo.png" style="width: 30px; height: 30px;">
+                        </a>
+                        <a href="https://www.instagram.com/peacehome_sapa/" target="_blank"
+                            style="display: inline-block;">
+                            <img src="images/Instagram_Icon.png" style="width: 30px; height: 30px;">
+                        </a>
+                    </div>
+
+                    <!-- Contact Info -->
+                    <h5 style="font-size: 1.2rem; margin-bottom: 10px;">Phone / Zalo / Whatsapp:</h5>
+                    <p style="margin: 5px 0;">Ms. Dung: 03 95 31 67 60</p>
+                    <p style="margin: 5px 0;">Ms. Thơm: 09 82 89 77 36</p>
+                    <p style="margin-top: 10px;">If we can be of any assistance, please do not hesitate to contact us!
+                    </p>
+                </div>
+
+                <!-- Map -->
+                <div class="col-md-4 mb-4">
+                    <div style="width: 100%; height: 100%;">
+                        <iframe
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3717.047482477723!2d103.9198331!3d22.2948518!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x36cd38ac38ebcdb3%3A0x35cd8e71fd74319c!2sAn%20B%C3%ACnh%20Home!5e0!3m2!1sen!2s!4v1680000000000!5m2!1sen!2s"
+                            width="100%" height="200" style="border:0;" allowfullscreen="" loading="lazy">
+                        </iframe>
+                    </div>
+                </div>
+
+                <!-- Address -->
+                <div class="col-md-4 mb-4 text-start">
+                    <h5 style="font-size: 1.2rem; margin-bottom: 10px;">Our address:</h5>
+                    <p style="margin: 5px 0;">
+                        Peace Home / An Bình Home<br>
+                        Hòa Sử Pán<br>
+                        Mường Hoa<br>
+                        SA PA<br>
+                        Lào Cai Province<br>
+                        VIET NAM
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+
 
 
 
