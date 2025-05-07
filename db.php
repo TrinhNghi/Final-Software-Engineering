@@ -105,14 +105,15 @@ function send_activation_email($email, $token) {
         $mail->isHTML(true);
         $mail->Subject = 'Verify account (activate your account!)';
 
-        // Use root-relative path for HTML link
-        $relative_link = "/activate.php?email=" . urlencode($email) . "&token=" . urlencode($token);
-        $mail->Body = "Click <a href='$relative_link'>here</a> to activate your account!";
+        // Dynamically construct the base URL
+        $base_url = $_SERVER['REQUEST_SCHEME'] . "://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']);
 
-        // Use dynamic full URL for AltBody (plain text)
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-        $domain = $_SERVER['HTTP_HOST'];
-        $full_url = $protocol . $domain . $relative_link;
+        // Construct the activation link
+        $relative_link = "/activate.php?email=" . urlencode($email) . "&token=" . urlencode($token);
+        $full_url = $base_url . $relative_link;
+
+        // Set email body
+        $mail->Body = "Click <a href='$full_url'>here</a> to activate your account!";
         $mail->AltBody = "Copy and paste this link to activate your account: $full_url";
 
         $mail->send();
@@ -143,14 +144,15 @@ function send_reset_email($email, $token) {
         $mail->isHTML(true);
         $mail->Subject = 'Reset Your Password';
 
-        // Use root-relative path for HTML link
-        $relative_link = "/reset_password.php?email=" . urlencode($email) . "&token=" . urlencode($token);
-        $mail->Body = "Click <a href='$relative_link'>here</a> to reset your password. This link expires in 24 hours.";
+        // Dynamically construct the base URL
+        $base_url = $_SERVER['REQUEST_SCHEME'] . "://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']);
 
-        // Use dynamic full URL for AltBody (plain text)
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-        $domain = $_SERVER['HTTP_HOST'];
-        $full_url = $protocol . $domain . $relative_link;
+        // Construct the reset password link
+        $relative_link = "/reset_password.php?email=" . urlencode($email) . "&token=" . urlencode($token);
+        $full_url = $base_url . $relative_link;
+
+        // Set email body
+        $mail->Body = "Click <a href='$full_url'>here</a> to reset your password. This link expires in 24 hours.";
         $mail->AltBody = "Copy and paste this link to reset your password: $full_url";
 
         $mail->send();

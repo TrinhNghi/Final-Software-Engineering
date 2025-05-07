@@ -64,7 +64,7 @@ session_start();
                 aria-controls="navbarTogglerDemo03" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <a class="navbar-brand" href="HMS.html"
+            <a class="navbar-brand" href="index.php"
                 style="text-align: center; margin-bottom: 5px; padding-left: 100px; padding-right: 150px;">
                 <i class="material-icons"
                     style="font-size: 30px; color:  #c68c53; text-align: center;padding: 5px;vertical-align: text-bottom;">hotel</i>
@@ -86,7 +86,7 @@ session_start();
         </p>
         <p style="font-size: 1.2rem; font-family: 'Segoe UI', sans-serif; font-weight: bold;">Supan village • near
             Sapa</p>
-        <a href="Signup.html">
+        <a href="login.php">
             <button class="button1"
                 style="background-color: #c68c53 ; color: white; border: none; padding: 10px 20px; font-size: 1.2rem; border-radius: 10px; transition: 0.3s;">
                 Join Us Today!
