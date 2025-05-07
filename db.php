@@ -148,8 +148,12 @@ function send_reset_email($email, $token) {
         $mail->isHTML(true);
         $mail->Subject = 'Reset Your Password';
 
-        // Dynamically construct the base URL
-        $base_url = $_SERVER['REQUEST_SCHEME'] . "://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']);
+        // Construct the base URL, ensuring forward slashes
+        $base_url = $_SERVER['REQUEST_SCHEME'] . "://" . $_SERVER['HTTP_HOST'];
+        $script_dir = str_replace('\\', '/', dirname($_SERVER['PHP_SELF']));
+        // Ensure no trailing slash and clean path
+        $script_dir = rtrim($script_dir, '/');
+        $base_url .= $script_dir;
 
         // Construct the reset password link
         $relative_link = "/reset_password.php?email=" . urlencode($email) . "&token=" . urlencode($token);
