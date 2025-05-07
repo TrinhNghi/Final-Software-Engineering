@@ -66,10 +66,31 @@ function is_email_exists($email) {
     return $row['count'] > 0;
 }
 
+function is_username_exists($username) {
+    $sql = 'SELECT COUNT(*) as count FROM account WHERE username = ?';
+    $conn = open_database();
+    $stm = $conn->prepare($sql);
+    $stm->bind_param('s', $username);
+    if (!$stm->execute()) {
+        error_log("is_username_exists: Query error for username $username: " . $stm->error);
+        die('Query error: ' . $stm->error);
+    }
+
+    $result = $stm->get_result();
+    $row = $result->fetch_assoc();
+    return $row['count'] > 0;
+}
+
+
+
 function register($user, $pass, $first, $last, $email) {
     if (is_email_exists($email)) {
         error_log("register: Email already exists: $email");
         return array('code' => 1, 'error' => 'Email exists!');
+    }
+    if(is_username_exists($user)){
+        error_log("register: Username already exists: $user");
+        return array('code' => 3, 'error' => 'Username exists!');
     }
     $hash = password_hash($pass, PASSWORD_DEFAULT);
     $rand = random_int(0, 1000);

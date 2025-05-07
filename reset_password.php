@@ -47,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Please enter your password';
     } else if (strlen($pass) < 6) {
         $error = 'Password must have at least 6 characters';
+    } else if (!preg_match('/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]+$/', $pass)) {
+        $error = 'Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character (!@#$%^&*)';
     } else if ($pass != $pass_confirm) {
         $error = 'Password does not match';
     } else if ($email !== strtolower(trim($_GET['email']))) {

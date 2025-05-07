@@ -5,7 +5,6 @@
         exit();
     }
 
-
     require_once('db.php');
     $error = '';
     $success = '';
@@ -47,6 +46,9 @@
         else if (strlen($pass) < 6) {
             $error = 'Password must have at least 6 characters';
         }
+        else if (!preg_match('/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]+$/', $pass)) {
+            $error = 'Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character (!@#$%^&*)';
+        }
         else if ($pass != $pass_confirm) {
             $error = 'Password does not match';
         }
@@ -64,8 +66,11 @@
             else if($result['code'] == 1){
                 $error = 'This email is already exists';
             }
+            else if($result['code'] == 3){
+                $error = 'This username is already exists';
+            }
             else{
-                $error = 'An error occured. Please try again later!';
+                $error = 'An error occurred. Please try again later!';
             }
         }
     }
