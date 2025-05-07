@@ -104,8 +104,16 @@ function send_activation_email($email, $token) {
 
         $mail->isHTML(true);
         $mail->Subject = 'Verify account (activate your account!)';
-        $mail->Body = "Click <a href='activate.php?email=$email&token=$token'>here</a> to activate your account!";
-        $mail->AltBody = "Copy and paste this link to activate your account: activate.php?email=$email&token=$token";
+
+        // Use root-relative path for HTML link
+        $relative_link = "/activate.php?email=" . urlencode($email) . "&token=" . urlencode($token);
+        $mail->Body = "Click <a href='$relative_link'>here</a> to activate your account!";
+
+        // Use dynamic full URL for AltBody (plain text)
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+        $domain = $_SERVER['HTTP_HOST'];
+        $full_url = $protocol . $domain . $relative_link;
+        $mail->AltBody = "Copy and paste this link to activate your account: $full_url";
 
         $mail->send();
         error_log("send_activation_email: Email sent to $email with token $token");
@@ -134,8 +142,16 @@ function send_reset_email($email, $token) {
 
         $mail->isHTML(true);
         $mail->Subject = 'Reset Your Password';
-        $mail->Body = "Click <a href='reset_password.php?email=" . urlencode($email) . "&token=$token'>here</a> to reset your password. This link expires in 24 hours.";
-        $mail->AltBody = "Copy and paste this link to reset your password: reset_password.php?email=" . urlencode($email) . "&token=$token";
+
+        // Use root-relative path for HTML link
+        $relative_link = "/reset_password.php?email=" . urlencode($email) . "&token=" . urlencode($token);
+        $mail->Body = "Click <a href='$relative_link'>here</a> to reset your password. This link expires in 24 hours.";
+
+        // Use dynamic full URL for AltBody (plain text)
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+        $domain = $_SERVER['HTTP_HOST'];
+        $full_url = $protocol . $domain . $relative_link;
+        $mail->AltBody = "Copy and paste this link to reset your password: $full_url";
 
         $mail->send();
         error_log("send_reset_email: Email sent to $email with token $token");
