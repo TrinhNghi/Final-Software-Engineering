@@ -95,7 +95,7 @@ function send_activation_email($email, $token) {
         $mail->Host = 'smtp.gmail.com';
         $mail->SMTPAuth = true;
         $mail->Username = 'guidervirus7486@gmail.com';
-        $mail->Password = 'btnladyuxqdbjmdu';
+        $mail->Password = 'btnladyuxqdbjmdu'; // Ensure this is a valid Gmail App Password
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port = 587;
 
@@ -105,8 +105,12 @@ function send_activation_email($email, $token) {
         $mail->isHTML(true);
         $mail->Subject = 'Verify account (activate your account!)';
 
-        // Dynamically construct the base URL
-        $base_url = $_SERVER['REQUEST_SCHEME'] . "://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']);
+        // Construct the base URL, ensuring forward slashes
+        $base_url = $_SERVER['REQUEST_SCHEME'] . "://" . $_SERVER['HTTP_HOST'];
+        $script_dir = str_replace('\\', '/', dirname($_SERVER['PHP_SELF']));
+        // Ensure no trailing slash and clean path
+        $script_dir = rtrim($script_dir, '/');
+        $base_url .= $script_dir;
 
         // Construct the activation link
         $relative_link = "/activate.php?email=" . urlencode($email) . "&token=" . urlencode($token);
