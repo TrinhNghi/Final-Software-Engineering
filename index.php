@@ -227,17 +227,17 @@ session_start();
             <div class="row" style="padding-left: 5px">
                 <div class="col-sm-4" style="padding: 5px">
                     <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="0">
-                        <img src="images/image1.jpg" style="width: 240px; height: 150px;">
+                        <img src="images/image1.png" style="width: 240px; height: 150px;">
                     </a>
                 </div>
                 <div class="col-sm-4" style="padding: 5px">
                     <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="1">
-                        <img src="images/image2.jpg" style="width: 240px; height: 150px;">
+                        <img src="images/image2.png" style="width: 240px; height: 150px;">
                     </a>
                 </div>
                 <div class="col-sm-4" style="padding: 5px">
                     <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="2">
-                        <img src="images/image3.jpg" style="width: 240px; height: 150px;">
+                        <img src="images/image3.png" style="width: 240px; height: 150px;">
                     </a>
                 </div>
             </div>
@@ -245,17 +245,17 @@ session_start();
             <div class="row" style="padding-left: 5px">
                 <div class="col-sm-4" style="padding: 5px">
                     <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="3">
-                        <img src="images/image4.jpg" style="width: 240px; height: 150px;">
+                        <img src="images/image4.png" style="width: 240px; height: 150px;">
                     </a>
                 </div>
                 <div class="col-sm-4" style="padding: 5px">
                     <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="4">
-                        <img src="images/image5.jpg" style="width: 240px; height: 150px;">
+                        <img src="images/image5.png" style="width: 240px; height: 150px;">
                     </a>
                 </div>
                 <div class="col-sm-4" style="padding: 5px">
                     <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="5">
-                        <img src="images/image6.jpg" style="width: 240px; height: 150px;">
+                        <img src="images/image6.png" style="width: 240px; height: 150px;">
                     </a>
                 </div>
             </div>
@@ -263,7 +263,7 @@ session_start();
             <div class="row" style="padding-left: 5px">
                 <div class="col-sm-4" style="padding: 5px">
                     <a href="javascript:void(0);" data-toggle="modal" data-target="#imageModal" data-slide="6">
-                        <img src="images/image7.jpg" style="width: 240px; height: 150px;">
+                        <img src="images/image7.png" style="width: 240px; height: 150px;">
                     </a>
                 </div>
                 <div class="col-sm-4" style="padding: 5px">
@@ -297,31 +297,31 @@ session_start();
                     <div id="carouselExample" class="carousel slide h-100" data-ride="carousel">
                         <div class="carousel-inner h-100">
                             <div class="carousel-item active h-100">
-                                <img src="images/image1.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                <img src="images/image1.png" class="d-block w-100 h-100 object-fit-contain"
                                     alt="Image 1">
                             </div>
                             <div class="carousel-item h-100">
-                                <img src="images/image2.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                <img src="images/image2.png" class="d-block w-100 h-100 object-fit-contain"
                                     alt="Image 2">
                             </div>
                             <div class="carousel-item h-100">
-                                <img src="images/image3.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                <img src="images/image3.png" class="d-block w-100 h-100 object-fit-contain"
                                     alt="Image 3">
                             </div>
                             <div class="carousel-item h-100">
-                                <img src="images/image4.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                <img src="images/image4.png" class="d-block w-100 h-100 object-fit-contain"
                                     alt="Image 4">
                             </div>
                             <div class="carousel-item h-100">
-                                <img src="images/image5.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                <img src="images/image5.png" class="d-block w-100 h-100 object-fit-contain"
                                     alt="Image 5">
                             </div>
                             <div class="carousel-item h-100">
-                                <img src="images/image6.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                <img src="images/image6.png" class="d-block w-100 h-100 object-fit-contain"
                                     alt="Image 6">
                             </div>
                             <div class="carousel-item h-100">
-                                <img src="images/image7.jpg" class="d-block w-100 h-100 object-fit-contain"
+                                <img src="images/image7.png" class="d-block w-100 h-100 object-fit-contain"
                                     alt="Image 7">
                             </div>
                             <div class="carousel-item h-100">
