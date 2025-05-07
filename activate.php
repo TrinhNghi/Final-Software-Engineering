@@ -1,4 +1,3 @@
-
 <?php
 require_once('db.php'); 
 
@@ -27,43 +26,74 @@ if (isset($_GET['email']) && isset($_GET['token'])) {
         }
     }
 } else {
-    $error = 'Invalid activation url!';
+    $error = 'Invalid activation URL!';
     error_log("activate.php: Missing email or token in URL");
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Kích hoạt tài khoản</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous" />
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Account Activation</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    <style>
+        .gradient-bg {
+            background: #A87E62;
+            background: linear-gradient(90deg, rgba(168, 126, 98, 1) 0%, rgba(217, 183, 158, 1) 41%, rgba(221, 191, 168, 1) 65%, rgba(235, 223, 204, 1) 100%);
+            width: 100%;
+            height: 100vh;
+        }
+
+        .activation-box {
+            background-color: white;
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: rgb(77, 38, 38) 0px 20px 30px -10px;
+            padding: 30px 20px;
+        }
+
+        .btn-success {
+            background-color: #6a1000;
+            border-color: #6a1000;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #5a0e00;
+            border-color: #5a0e00;
+        }
+
+        .text-primary {
+            color: #5a0e00 !important;
+        }
+    </style>
 </head>
 <body>
-<?php if (!empty($error)) { ?>
-    <div class="row">
-        <div class="col-md-6 mt-5 mx-auto p-3 border rounded">
-            <h4>Account Activation</h4>
-            <p class="text-danger"><?php echo htmlspecialchars($error); ?></p>
-            <p>Click <a href="login.php">here</a> to login.</p>
-            <a class="btn btn-success px-5" href="login.php">Login</a>
-        </div>
-    </div>
-<?php } else { ?>
-    <div class="container">
-        <div class="row">
-            <div class="col-md-6 mt-5 mx-auto p-3 border rounded">
-                <h4>Account Activation</h4>
-                <p class="text-success">Congratulations! <?php echo htmlspecialchars($message); ?></p>
-                <p>Click <a href="login.php">here</a> to login and manage your account information.</p>
+<div class="container-fluid vh-100 d-flex justify-content-center align-items-center gradient-bg">
+    <div class="activation-box p-4">
+        <?php if (!empty($error)) { ?>
+            <h3 class="text-center text-danger mb-4">Activation Failed</h3>
+            <p class="text-dark text-center"><?= htmlspecialchars($error); ?></p>
+            <p class="text-dark text-center">Click <a href="login.php" class="text-primary">here</a> to login.</p>
+            <div class="text-center">
                 <a class="btn btn-success px-5" href="login.php">Login</a>
             </div>
-        </div>
+        <?php } else { ?>
+            <h3 class="text-center text-success mb-4">Activation Successful</h3>
+            <p class="text-dark text-center">Congratulations! <?= htmlspecialchars($message); ?></p>
+            <p class="text-dark text-center">Click <a href="login.php" class="text-primary">here</a> to login and manage your account information.</p>
+            <div class="text-center">
+                <a class="btn btn-success px-5" href="login.php">Login</a>
+            </div>
+        <?php } ?>
     </div>
-<?php } ?>
+</div>
 </body>
 </html>
