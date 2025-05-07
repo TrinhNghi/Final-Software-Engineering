@@ -26,23 +26,13 @@
             $error = 'Password must have at least 6 characters';
         }
         else{
-            /*else if ($user == 'admin' && $pass == '123456') {
-            // success
-
-            $_SESSION['user'] = 'admin';
-            $_SESSION['name'] = 'Mai Van Manh';
-
-            header('Location: index.php');
-            exit();
-        }else {
-            $error = 'Invalid username or password';
-        } */
+        
             $result = login($user, $pass);
             if($result['code'] == 0){
                 $data = $result['data'];
                 $_SESSION['user'] = $user;
                 $_SESSION['name'] = $data['firstname'].' '.$data['lastname'];
-
+                session_regenerate_id(true);
                 header('Location: index.php');
                 exit();
             }

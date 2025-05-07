@@ -104,8 +104,8 @@ function send_activation_email($email, $token) {
 
         $mail->isHTML(true);
         $mail->Subject = 'Verify account (activate your account!)';
-        $mail->Body = "Click <a href='http://localhost/activate.php?email=$email&token=$token'>here</a> to activate your account!";
-        $mail->AltBody = "Copy and paste this link to activate your account: http://localhost/activate.php?email=$email&token=$token";
+        $mail->Body = "Click <a href='activate.php?email=$email&token=$token'>here</a> to activate your account!";
+        $mail->AltBody = "Copy and paste this link to activate your account: activate.php?email=$email&token=$token";
 
         $mail->send();
         error_log("send_activation_email: Email sent to $email with token $token");
@@ -134,8 +134,8 @@ function send_reset_email($email, $token) {
 
         $mail->isHTML(true);
         $mail->Subject = 'Reset Your Password';
-        $mail->Body = "Click <a href='http://localhost/reset_password.php?email=" . urlencode($email) . "&token=$token'>here</a> to reset your password. This link expires in 24 hours.";
-        $mail->AltBody = "Copy and paste this link to reset your password: http://localhost/reset_password.php?email=" . urlencode($email) . "&token=$token";
+        $mail->Body = "Click <a href='reset_password.php?email=" . urlencode($email) . "&token=$token'>here</a> to reset your password. This link expires in 24 hours.";
+        $mail->AltBody = "Copy and paste this link to reset your password: reset_password.php?email=" . urlencode($email) . "&token=$token";
 
         $mail->send();
         error_log("send_reset_email: Email sent to $email with token $token");
