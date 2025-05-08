@@ -49,6 +49,10 @@ session_start();
         .gallery img:hover {
             transform: scale(1.1);
         }
+
+        html {
+            scroll-behavior: smooth;
+        }
     </style>
 
 
@@ -56,10 +60,13 @@ session_start();
 
 <body>
 
-
+    <button onclick="scrollToTop()" id="returnToTopBtn" title="Go to top"
+        style="display: none; position: fixed; bottom: 20px; right: 30px; z-index: 99; font-size: 18px; border: none; outline: none; background-color: #6a1000; color: white; cursor: pointer; padding: 15px; border-radius: 50px;">
+        ↑
+    </button>
     <nav class="navbar navbar-expand-lg navbar-light bg-light"
         style="padding: 20px; width: 100%; position: fixed; opacity: 0.9; z-index: 1000; height: 50px;">
-        <center>
+        <div class="container-fluid">
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo03"
                 aria-controls="navbarTogglerDemo03" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -70,10 +77,36 @@ session_start();
                     style="font-size: 30px; color:  #c68c53; text-align: center;padding: 5px;vertical-align: text-bottom;">hotel</i>
                 HOTEL MANAGEMENT SYSTEM
             </a>
-        </center>
-        <button id="Historybtn">
-            Scrollll
-        </button>
+            <div class="collapse navbar-collapse" id="navbarTogglerDemo03">
+                <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#introduction" style="color: #c68c53;">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#footer" style="color: #c68c53;">Contact</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="bookroom.php" style="color: #c68c53;">Book Room</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ml-auto">
+                    <?php if (isset($_SESSION['user'])): ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="userprofile.php" style="color: #c68c53;">
+                                <i class="fa fa-user-circle" style="font-size: 20px;"></i> Profile
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="logout.php" style="color: #c68c53;">Logout</a>
+                        </li>
+                    <?php else: ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="login.php" style="color: #c68c53;">Login</a>
+                        </li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+        </div>
     </nav>
 
     <!-- Static Section -->
@@ -120,18 +153,18 @@ session_start();
         </a>
     </div>
 
-    <div
-        style="background-color: #F0F8FF; padding: 100px; letter-spacing: 1.5px; line-height: 30px; text-align: center; padding-left: 300px; padding-right: 300px;">
+    <div style="background-color: #F0F8FF; padding: 100px; letter-spacing: 1.5px; line-height: 30px; text-align: center; padding-left: 300px; padding-right: 300px;"
+        id="introduction">
         <h1 style="font-family: initial; line-height: 100px">Welcome to Peace Home!</h1>
         <p style="font-family: Arial;"> Peace Home is located in Su Pan, a small village sourrounded by nature and rice
             fields in the area of Sa Pa. We are located 10 km away from Sa Pa town (about 30 minutes drive, or 3 hours
             walk).
 
             If you are looking for a peaceful place, far from the city buzz, with fresh air and hiking trails, then
-            Peace Home is the place for you!<br><b>&#9883; &#x269B; &#9883;</p>
+            Peace Home is the place for you!<br>
     </div>
 
-    <div class="row" style="background-color: #c68c53; padding: 60px; width: 100%;">
+    <div class="row" style="background-color: #c68c53; padding: 60px; width: 100%; margin: 0;">
 
         <!-- Room and Services (Carousel) -->
         <div class="column" style="float: left; padding-left: 250px;">
@@ -141,10 +174,10 @@ session_start();
                         <img src="images/room1.png" class="d-block" style="width: 450px; height: 275px;">
                     </div>
                     <div class="carousel-item">
-                        <img src="images/room2.png"  class="d-block" style="width: 450px;height: 275px;">
+                        <img src="images/room2.png" class="d-block" style="width: 450px;height: 275px;">
                     </div>
                     <div class="carousel-item">
-                        <img src="images/room3.png"  class="d-block" style="width: 450px; height: 275px;">
+                        <img src="images/room3.png" class="d-block" style="width: 450px; height: 275px;">
                     </div>
                 </div>
             </div>
@@ -354,7 +387,8 @@ session_start();
     </div>
 
     <footer
-        style="background-color: #c68c53; font-family: initial; text-align: center; padding: 40px 20px; width: 100%; color: white;">
+        style="background-color: #c68c53; font-family: initial; text-align: center; padding: 40px 20px; width: 100%; color: white;"
+        id="footer">
         <h1 style="font-size: 1.8rem; margin-bottom: 20px;">Our Location</h1>
         <p style="margin-bottom: 30px;">Visit us at our location for an unforgettable experience!</p>
 
@@ -411,8 +445,6 @@ session_start();
 
 
 
-
-
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
         integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
         crossorigin="anonymous"></script>
@@ -423,14 +455,29 @@ session_start();
         integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm"
         crossorigin="anonymous"></script>
     <script>
-        // Add a click event listener to the button
-        document.getElementById("Historybtn").addEventListener("click", function () {
-            // Scroll to the element with ID "History"
-            document.getElementById("History").scrollIntoView({
-                behavior: "smooth", // Smooth scrolling animation
-                block: "start" // Align to the top of the element
-            });
+        // Get the button
+        const returnToTopBtn = document.getElementById("returnToTopBtn");
+        document.addEventListener("DOMContentLoaded", function () {
+            // Hide the button initially
+            returnToTopBtn.style.display = "none";
+            scrollToTop();
         });
+        // Show the button when the user scrolls down 20px from the top
+        window.onscroll = function () {
+            console.log("Scrolling...");
+            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                returnToTopBtn.style.display = "block";
+            } else {
+                returnToTopBtn.style.display = "none";
+            }
+        };
+
+        // Scroll to the top of the page when the button is clicked
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0
+            });
+        }
     </script>
 </body>
 
