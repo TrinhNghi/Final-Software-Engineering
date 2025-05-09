@@ -37,6 +37,11 @@ if (!isset($_SESSION['admin'])) {
             background-color: #A87E62;
             color: white;
             padding: 15px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
         }
 
         .navbar .navbar-brand {
@@ -62,7 +67,7 @@ if (!isset($_SESSION['admin'])) {
             color: white;
             padding: 20px;
             position: fixed;
-            top: 0;
+            top: 60px; /* Adjusted to sit below the navbar */
             left: 0;
             width: 250px;
             overflow-y: auto;
@@ -83,6 +88,7 @@ if (!isset($_SESSION['admin'])) {
 
         .content {
             margin-left: 270px;
+            margin-top: 80px; /* Adjusted to sit below the navbar */
             padding: 20px;
         }
 
@@ -145,86 +151,84 @@ if (!isset($_SESSION['admin'])) {
             switch (section) {
                 case 'manageBooking':
                     contentDiv.innerHTML = `
-    <h2>Manage Booking</h2>
-    <p>Here you can view, edit, and delete bookings.</p>
-    <button class="btn btn-primary mb-3">Add New Booking</button>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Booking ID</th>
-                <th>Guest Name</th>
-                <th>Room Type</th>
-                <th>Check-In</th>
-                <th>Check-Out</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>#B001</td>
-                <td>Michael Scott</td>
-                <td>Suite</td>
-                <td>2025-05-10</td>
-                <td>2025-05-12</td>
-                <td>
-                    <button class="btn btn-sm btn-warning">Edit</button>
-                    <button class="btn btn-sm btn-danger">Delete</button>
-                </td>
-            </tr>
-            <tr>
-                <td>#B002</td>
-                <td>Pam Beesly</td>
-                <td>Single</td>
-                <td>2025-05-11</td>
-                <td>2025-05-13</td>
-                <td>
-                    <button class="btn btn-sm btn-warning">Edit</button>
-                    <button class="btn btn-sm btn-danger">Delete</button>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-`;
-
+                        <h2>Manage Booking</h2>
+                        <p>Here you can view, edit, and delete bookings.</p>
+                        <button class="btn btn-primary mb-3">Add New Booking</button>
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Booking ID</th>
+                                    <th>Guest Name</th>
+                                    <th>Room Type</th>
+                                    <th>Check-In</th>
+                                    <th>Check-Out</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>#B001</td>
+                                    <td>Michael Scott</td>
+                                    <td>Suite</td>
+                                    <td>2025-05-10</td>
+                                    <td>2025-05-12</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning">Edit</button>
+                                        <button class="btn btn-sm btn-danger">Delete</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>#B002</td>
+                                    <td>Pam Beesly</td>
+                                    <td>Single</td>
+                                    <td>2025-05-11</td>
+                                    <td>2025-05-13</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning">Edit</button>
+                                        <button class="btn btn-sm btn-danger">Delete</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    `;
                     break;
                 case 'manageStaff':
                     contentDiv.innerHTML = `
-    <h2>Manage Staff</h2>
-    <p>Here you can view staff details, assign roles, and manage schedules.</p>
-    <button class="btn btn-primary mb-3">Add New Staff</button>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Staff ID</th>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Shift</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>#S001</td>
-                <td>Jim Halpert</td>
-                <td>Receptionist</td>
-                <td>Morning</td>
-                <td>
-                    <button class="btn btn-sm btn-info">Edit</button>
-                </td>
-            </tr>
-            <tr>
-                <td>#S002</td>
-                <td>Dwight Schrute</td>
-                <td>Security</td>
-                <td>Night</td>
-                <td>
-                    <button class="btn btn-sm btn-info">Edit</button>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-`;
-
+                        <h2>Manage Staff</h2>
+                        <p>Here you can view staff details, assign roles, and manage schedules.</p>
+                        <button class="btn btn-primary mb-3">Add New Staff</button>
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Staff ID</th>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Shift</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>#S001</td>
+                                    <td>Jim Halpert</td>
+                                    <td>Receptionist</td>
+                                    <td>Morning</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info">Edit</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>#S002</td>
+                                    <td>Dwight Schrute</td>
+                                    <td>Security</td>
+                                    <td>Night</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info">Edit</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    `;
                     break;
                 case 'manageService':
                     contentDiv.innerHTML = `

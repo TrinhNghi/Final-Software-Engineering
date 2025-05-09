@@ -37,6 +37,11 @@ $_SESSION['receptionist'] = [
             background-color: #A87E62;
             color: white;
             padding: 15px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
         }
 
         .navbar .navbar-brand {
@@ -62,7 +67,7 @@ $_SESSION['receptionist'] = [
             color: white;
             padding: 20px;
             position: fixed;
-            top: 0;
+            top: 60px; /* Adjusted to sit below the navbar */
             left: 0;
             width: 250px;
             overflow-y: auto;
@@ -83,6 +88,7 @@ $_SESSION['receptionist'] = [
 
         .content {
             margin-left: 270px;
+            margin-top: 80px; /* Adjusted to sit below the navbar */
             padding: 20px;
         }
 
