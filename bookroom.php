@@ -156,11 +156,89 @@
                         <div class="card-body">
                             <h5 class="card-title">Room <?php echo $i; ?></h5>
                             <p class="card-text">$<?php echo 50 + ($i * 5); ?> per night</p>
-                            <a href="book.php?roomId=<?php echo $i; ?>" class="btn btn-primary">Book Now</a>
+                            <a href="#" 
+                               class="btn btn-primary" 
+                               data-toggle="modal" 
+                               data-target="#bookingModal" 
+                               data-room-id="${room.id}" 
+                               data-room-type="${room.type}" 
+                               data-room-price="${room.price}">
+                               Book Now
+                            </a>
                         </div>
                     </div>
                 </div>
                 <?php endfor; ?>
+            </div>
+        </div>
+
+        <!-- Booking Modal -->
+        <div class="modal fade" id="bookingModal" tabindex="-1" role="dialog" aria-labelledby="bookingModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="bookingModalLabel">Room Booking Confirmation</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="bookingForm">
+                            <div class="form-group">
+                                <label for="roomType">Room Type</label>
+                                <input type="text" class="form-control" id="roomType" name="roomType" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="roomPrice">Price per Night</label>
+                                <input type="text" class="form-control" id="roomPrice" name="roomPrice" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="checkInDate">Check-In Date</label>
+                                <input type="date" class="form-control" id="checkInDate" name="checkInDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="checkOutDate">Check-Out Date</label>
+                                <input type="date" class="form-control" id="checkOutDate" name="checkOutDate" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Confirm Booking</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Results Modal -->
+        <div class="modal fade" id="searchResultsModal" tabindex="-1" role="dialog" aria-labelledby="searchResultsModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="searchResultsModalLabel">Room Booking Confirmation</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="bookingForm">
+                            <div class="form-group">
+                                <label for="modalStartDate">Start Date</label>
+                                <input type="date" class="form-control" id="modalStartDate" name="modalStartDate" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="modalEndDate">End Date</label>
+                                <input type="date" class="form-control" id="modalEndDate" name="modalEndDate" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="modalAdults">Adults</label>
+                                <input type="number" class="form-control" id="modalAdults" name="modalAdults" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="modalChildren">Children</label>
+                                <input type="number" class="form-control" id="modalChildren" name="modalChildren" readonly>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Confirm Booking</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -203,6 +281,133 @@
                 endDateInput.value = '';
             }
         });
+
+ $(document).ready(function () {
+  $('form').on('submit', function (e) {
+    e.preventDefault();
+
+    const adults = parseInt($('#adults').val());
+    const children = parseInt($('#children').val());
+    const totalPeople = adults + children;
+
+    const rooms = [
+      { id: 1, type: 'Single', capacity: 1, price: 50 },
+      { id: 2, type: 'Double', capacity: 2, price: 80 },
+      { id: 3, type: 'Suite', capacity: 4, price: 150 }
+    ];
+
+    // Check if any room can accommodate all people
+    const suitableRooms = rooms.filter(room => room.capacity >= totalPeople);
+
+    if (suitableRooms.length > 0) {
+      // Display suitable rooms on the right panel
+      let roomHtml = '';
+      suitableRooms.forEach(room => {
+        roomHtml += `
+          <div class="col-md-4 mb-4">
+            <div class="card">
+              <img src="images/room${room.id}.png" class="card-img-top" alt="${room.type}">
+              <div class="card-body">
+                <h5 class="card-title">${room.type} Room</h5>
+                <p class="card-text">Capacity: ${room.capacity} | $${room.price} per night</p>
+                <a href="#" 
+   class="btn btn-primary" 
+   data-toggle="modal" 
+   data-target="#bookingModal" 
+   data-room-id="${room.id}" 
+   data-room-type="${room.type}" 
+   data-room-price="${room.price}">
+   Book Now
+</a>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      $('.display-section .row').html(roomHtml);
+    } else {
+      // Use greedy combination approach and show modal
+      const combinations = [];
+      let remaining = totalPeople;
+      const sortedRooms = rooms.slice().sort((a, b) => b.capacity - a.capacity);
+
+      while (remaining > 0) {
+        const room = sortedRooms.find(r => r.capacity <= remaining) || sortedRooms[sortedRooms.length - 1];
+        combinations.push(room);
+        remaining -= room.capacity;
+      }
+
+      let modalHtml = '<ul class="list-group">';
+      let totalCost = 0;
+      combinations.forEach((room, index) => {
+        modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.type} (Capacity: ${room.capacity}) - $${room.price}</li>`;
+        totalCost += room.price;
+      });
+      modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> $${totalCost}</p>`;
+
+      $('#modalBodyContent').html(modalHtml);
+      $('#bookingModal').modal('show');
+    }
+  });
+});
+
     </script>
+<script>
+    // Populate modal with room details and pre-filled dates
+    $('#bookingModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Button that triggered the modal
+        var roomId = button.data('room-id'); // Extract room ID
+        var roomType = button.data('room-type'); // Extract room type
+        var roomPrice = button.data('room-price'); // Extract room price
+
+        // Get the selected dates from the search form
+        var startDate = $('#startDate').val();
+        var endDate = $('#endDate').val();
+
+        // Update the modal's content
+        var modal = $(this);
+        modal.find('#roomType').val(roomType);
+        modal.find('#roomPrice').val('$' + roomPrice);
+        modal.find('#checkInDate').val(startDate);
+        modal.find('#checkOutDate').val(endDate);
+    });
+
+    // Handle booking form submission
+    $('#bookingForm').on('submit', function (e) {
+        e.preventDefault(); // Prevent form redirection
+        alert('Booking confirmed for ' + $('#roomType').val() + ' at ' + $('#roomPrice').val() + ' per night.');
+        $('#bookingModal').modal('hide'); // Close the modal after confirmation
+    });
+</script>
+<script>
+    $(document).ready(function () {
+        // Handle search form submission
+        $('#searchForm').on('submit', function (e) {
+            e.preventDefault(); // Prevent form redirection
+
+            // Get the form values
+            const startDate = $('#startDate').val();
+            const endDate = $('#endDate').val();
+            const adults = $('#adults').val();
+            const children = $('#children').val();
+
+            // Populate the modal with the form values
+            $('#modalStartDate').val(startDate);
+            $('#modalEndDate').val(endDate);
+            $('#modalAdults').val(adults);
+            $('#modalChildren').val(children);
+
+            // Show the modal
+            $('#searchResultsModal').modal('show');
+        });
+
+        // Handle booking form submission
+        $('#bookingForm').on('submit', function (e) {
+            e.preventDefault(); // Prevent form redirection
+            alert('Booking confirmed!');
+            $('#searchResultsModal').modal('hide'); // Close the modal
+        });
+    });
+</script>
 </body>
 </html>
