@@ -1,5 +1,6 @@
 <?php
     session_start();
+    
     if (isset($_SESSION['user'])) {
         header('Location: index.php');
         exit();
@@ -11,6 +12,14 @@
 
     $user = '';
     $pass = '';
+
+    if (isset($_COOKIE['remember_user'])) {
+        $user = $_COOKIE['remember_user'];
+    }
+    
+    if (isset($_COOKIE['remember_pass'])) {
+        $pass = $_COOKIE['remember_pass'];
+    }
 
     if (isset($_POST['user']) && isset($_POST['pass'])) {
         $user = $_POST['user'];
@@ -33,6 +42,16 @@
                 $_SESSION['user'] = $user;
                 $_SESSION['name'] = $data['firstname'].' '.$data['lastname'];
                 session_regenerate_id(true);
+
+                if (isset($_POST['remember'])) {
+                    setcookie('remember_user', $user, time() + (86400 * 30), "/");
+                    setcookie('remember_pass', $pass, time() + (86400 * 30), "/");
+                } else {
+
+                    setcookie('remember_user', '', time() - 3600, "/");
+                    setcookie('remember_pass', '', time() - 3600, "/");
+                }
+
                 header('Location: index.php');
                 exit();
             }

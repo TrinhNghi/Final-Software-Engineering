@@ -1,3 +1,4 @@
+
 <?php
 require_once('db.php'); 
 
@@ -26,7 +27,7 @@ if (isset($_GET['email']) && isset($_GET['token'])) {
         }
     }
 } else {
-    $error = 'Invalid activation URL!';
+    $error = 'Invalid activation url!';
     error_log("activate.php: Missing email or token in URL");
 }
 ?>
