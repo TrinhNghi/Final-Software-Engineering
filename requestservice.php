@@ -85,8 +85,9 @@
     </nav>
 
     <!-- Main Content -->
-    <div class="container-fluid gradient-bg" style="display: flex; padding-top: 80px;">
+    <div class="container-fluid gradient-bg" style="display: flex; padding-top: 80px; text-align: center;">
         <!-- Request Service Form -->
+        <div class="col-md-2"></div>
         <div class="col-md-3 filter-box">
             <h4 class="text-center mb-4">Request a Service</h4>
             <form id="serviceForm">
@@ -117,8 +118,9 @@
         </div>
 
         <!-- Display Section -->
-        <div class="col-md-9 display-section">
-            <h2 class="text-center text-white mb-4">Requested Services</h2>
+        <div class="col-md-2"></div>
+        <div class="col-md-3 filter-box">	
+            <h2 class="text-center mb-4">Requested Services</h2>
             <div class="row" id="requestedServices">
                 <!-- Requested services will be displayed here dynamically -->
             </div>
