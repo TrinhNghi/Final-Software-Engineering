@@ -90,7 +90,7 @@ session_start();
                     </li>
                 </ul>
                 <ul class="navbar-nav ml-auto">
-                    <?php if (isset($_SESSION['user'])): ?>
+                    <?php if (isset($_SESSION['name'])): ?>
                         <li class="nav-item">
                             <a class="nav-link" href="userprofile.php" style="color: #c68c53;">
                                 <i class="fa fa-user-circle" style="font-size: 20px;"></i> Profile

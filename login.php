@@ -1,4 +1,6 @@
 <?php
+
+
     session_start();
     
     if (isset($_SESSION['user'])) {
@@ -39,9 +41,11 @@
             $result = login($user, $pass);
             if($result['code'] == 0){
                 $data = $result['data'];
-                $_SESSION['user'] = $user;
-                $_SESSION['name'] = $data['firstname'].' '.$data['lastname'];
-                session_regenerate_id(true);
+                // Set session variables
+            $_SESSION['user_id'] = $data['id'];  // Store numeric ID for database relations
+            $_SESSION['username'] = $data['username'];  // Store username separately
+            $_SESSION['name'] = $data['firstname'].' '.$data['lastname'];
+            session_regenerate_id(true);  // Prevent session fixation
 
                 if (isset($_POST['remember'])) {
                     setcookie('remember_user', $user, time() + (86400 * 30), "/");

@@ -21,8 +21,44 @@ while ($row = $result->fetch_assoc()) {
     $rooms[] = $row;
 }
 // Convert the PHP array to a JSON object and pass it to JavaScript
+$startDate = $_GET['startDate'] ?? null;
+$endDate = $_GET['endDate'] ?? null;
+$roomType = $_GET['roomType'] ?? '';
+$priceRange = $_GET['priceRange'] ?? '';
+$availability = $_GET['availability'] ?? ''; // currently unused, can be used for UI only
+
+$filters = [];
+
+if ($roomType) {
+    $filters[] = "room_type = '" . $conn->real_escape_string($roomType) . "'";
+}
+
+if ($priceRange) {
+    if ($priceRange === "200+") {
+        $filters[] = "price >= 200";
+    } else {
+        [$min, $max] = explode('-', $priceRange);
+        $filters[] = "price BETWEEN $min AND $max";
+    }
+}
+
+if ($startDate && $endDate) {
+    $filters[] = "id NOT IN (
+        SELECT room_id FROM reservations
+        WHERE '$startDate' < checkout_date AND '$endDate' > checkin_date
+    )";
+}
+
+$where = $filters ? 'WHERE ' . implode(' AND ', $filters) : '';
+
+$sql = "SELECT * FROM rooms $where";
+$result = $conn->query($sql);
+while ($row = $result->fetch_assoc()) {
+    $available_rooms[] = $row;
+}
 echo '<script>';
-echo 'var rooms = ' . json_encode($rooms) . ';'; // Convert PHP array to JSON
+echo 'var rooms = ' . json_encode($rooms) . ';';
+echo 'var available_rooms = ' . json_encode($available_rooms) . ';'; // Convert PHP array to JSON
 echo '</script>';
 
 ?>
@@ -102,7 +138,7 @@ echo '</script>';
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ml-auto">
-                    <?php if (isset($_SESSION['user'])): ?>
+                    <?php if (isset($_SESSION['name'])): ?>
                         <li class="nav-item">
                             <a class="nav-link" href="userprofile.php" style="color: #6a1000;">
                                 <i class="fa fa-user-circle" style="font-size: 20px;"></i> Profile
@@ -242,6 +278,7 @@ echo '</script>';
                     </div>
                     <div class="modal-body">
                         <form id="bookingForm">
+                            <input type="hidden" id="roomId" name="roomId">
                             <div class="form-group">
                                 <label for="roomType">Room Type</label>
                                 <input type="text" class="form-control" id="roomType" name="roomType" readonly>
@@ -278,6 +315,7 @@ echo '</script>';
                     </div>
                     <div class="modal-body" id="modalBodyContent">
                         <form id="bookingForm">
+                            <input type="hidden" id="roomId" name="roomId">
                             <div class="form-group">
                                 <label for="modalStartDate">Start Date</label>
                                 <input type="date" class="form-control" id="modalStartDate" name="modalStartDate"
@@ -344,121 +382,159 @@ echo '</script>';
         });
 
         $(document).ready(function () {
-            $('form').on('submit', function (e){
-                e.preventDefault();
+    $('form').on('submit', function (e) {
+        e.preventDefault();
 
-                const adults = parseInt($('#adults').val());
-                const children = parseInt($('#children').val());
-                const totalPeople = adults + children;
+        const adults = parseInt($('#adults').val()) || 1;  // Default to 1 if NaN
+        const children = parseInt($('#children').val()) || 0;  // Default to 0 if NaN
+        const totalPeople = adults + children;
 
-                // Use the dynamically fetched rooms data from PHP
-                // Assuming 'rooms' is already defined via PHP above
-                const suitableRooms = rooms.filter(room => room.max_people >= totalPeople);
+        // Debug: Log available rooms to verify data
+        console.log('Available rooms:', available_rooms);
 
-                if (suitableRooms.length > 0) {
-                    // Display suitable rooms on the right panel
-                    let roomHtml = '';
-                    suitableRooms.forEach(room => {
-                        roomHtml += `
+        // Filter rooms that can accommodate all people at once
+        const suitableRooms = available_rooms.filter(room => {
+            // Ensure room.max_people is a number
+            const maxPeople = parseInt(room.max_people) || 0;
+            return maxPeople >= totalPeople;
+        });
+
+        if (suitableRooms.length > 0) {
+            // Display suitable rooms on the right panel
+            let roomHtml = '';
+            suitableRooms.forEach(room => {
+                // Debug: Log each room's data
+                console.log('Rendering room:', room);
+                
+                // Ensure we have valid data
+                if (!room.id || !room.room_name) {
+                    console.error('Invalid room data:', room);
+                    return;  // Skip invalid rooms
+                }
+
+                roomHtml += `
                     <div class="col-md-4 mb-4">
                         <div class="card shadow-sm">
                             <img src="images/room${(room.id % 3) + 1}.png" class="card-img-top" alt="Room Image">
                             <div class="card-body">
-                                <h5 class="card-title">${room.room_name}</h5>
+                                <h5 class="card-title">${room.room_name || 'Unnamed Room'}</h5>
                                 <p class="mb-1">
-                                    <strong>Category:</strong> ${room.room_category} &nbsp;|&nbsp;
-                                    <strong>Type:</strong> ${room.room_type}
+                                    <strong>Category:</strong> ${room.room_category || 'N/A'} &nbsp;|&nbsp;
+                                    <strong>Type:</strong> ${room.room_type || 'N/A'}
                                 </p>
                                 <p class="mb-1">
-                                    <strong>Max People:</strong> ${room.max_people} &nbsp;|&nbsp;
-                                    <strong>Price:</strong> $${room.price}/night
+                                    <strong>Max People:</strong> ${room.max_people || 'N/A'} &nbsp;|&nbsp;
+                                    <strong>Price:</strong> $${room.price ? parseFloat(room.price).toFixed(2) : '0.00'}/night
                                 </p>
                                 <p class="card-text mt-2">
-                                    ${room.description}
+                                    ${room.description || 'No description available.'}
                                 </p>
                                 <div class="d-flex justify-content-between align-items-center mt-3">
-                                    <a href="#" class="btn btn-primary book-btn"
-                                       data-toggle="modal"
-                                       data-target="#bookingModal"
-                                       data-room-id="${room.id}"
-                                       data-room-type="${room.room_type}"
-                                       data-room-price="${room.price}">
-                                        Book Now
-                                    </a>
-                                    ${room.room_type.toLowerCase() === 'vip' ? '<span class="badge bg-success">VIP</span>' : ''}
+                                    <a href="#" class="btn btn-primary book-btn" data-toggle="modal"
+                                            data-target="#bookingModal" 
+                                            data-room-id="${room.id}"
+                                            data-room-type="${room.room_type}"
+                                            data-room-price="${room.price}">
+                                            Book Now
+                                        </a>
+                                    ${room.room_type && room.room_type.toLowerCase() === 'vip' ? '<span class="badge bg-success">VIP</span>' : ''}
                                 </div>
                             </div>
                         </div>
                     </div>
                 `;
-                    });
-                    $('.display-section .row').html(roomHtml);
-                } else {
-                    // Use greedy combination approach and show modal
-                    const combinations = [];
-                    let remaining = totalPeople;
-
-                    // Cheapest combination logic (sorted by price)
-                    const cheapestRooms = rooms.slice().sort((a, b) => a.price - b.price);
-                    let cheapestRemaining = remaining;
-                    const cheapestCombinations = [];
-
-                    while (cheapestRemaining > 0) {
-                        const room = cheapestRooms.find(r => r.max_people <= cheapestRemaining) || cheapestRooms[cheapestRooms.length - 1];
-                        cheapestCombinations.push(room);
-                        cheapestRemaining -= room.max_people;
-                    }
-
-                    // Normal combination logic (sorted by capacity)
-                    const sortedRooms = rooms.slice().sort((a, b) => b.max_people - a.max_people);
-                    let normalRemaining = remaining;
-                    const normalCombinations = [];
-
-                    while (normalRemaining > 0) {
-                        const room = sortedRooms.find(r => r.max_people <= normalRemaining) || sortedRooms[sortedRooms.length - 1];
-                        normalCombinations.push(room);
-                        normalRemaining -= room.max_people;
-                    }
-
-                    // Generate HTML for both options
-                    let modalHtml = '<h5>Cheapest Combination</h5><ul class="list-group">';
-                    let cheapestTotalCost = 0;
-                    cheapestCombinations.forEach((room, index) => {
-                        modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.room_type} (Capacity: ${room.max_people}) - $${room.price}</li>`;
-                        cheapestTotalCost += room.price;
-                    });
-                    modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> $${cheapestTotalCost}</p>`;
-
-                    modalHtml += '<h5 class="mt-4">Normal Combination</h5><ul class="list-group">';
-                    let normalTotalCost = 0;
-                    normalCombinations.forEach((room, index) => {
-                        modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.room_type} (Capacity: ${room.max_people}) - $${room.price}</li>`;
-                        normalTotalCost += room.price;
-                    });
-                    modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> $${normalTotalCost}</p>`;
-
-                    $('#modalBodyContent').html(modalHtml);
-                    $('#searchResultsModal').modal('show');
-
-                }
+            });
             
-        });});
+            if (roomHtml === '') {
+                console.error('No valid rooms to display');
+                $('.display-section .row').html('<div class="col-12"><div class="alert alert-warning">No valid rooms found</div></div>');
+            } else {
+                $('.display-section .row').html(roomHtml);
+            }
+        } else {
+            // Create copies of the available rooms array for our combinations
+            const roomsCopy = [...available_rooms];
+            
+            // Cheapest combination logic (sorted by price)
+            const cheapestCombinations = findBestCombination([...roomsCopy].sort((a, b) => a.price - b.price), totalPeople);
+            
+            // Normal combination logic (sorted by capacity)
+            const normalCombinations = findBestCombination([...roomsCopy].sort((a, b) => b.max_people - a.max_people), totalPeople);
 
-    </script>
-    <script>
+            // Generate HTML for both options
+            let modalHtml = '<h5>Cheapest Combination</h5><ul class="list-group">';
+            let cheapestTotalCost = 0;
+
+            cheapestCombinations.forEach((room, index) => {
+                modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.room_name} (Capacity: ${room.max_people}) - $${room.price.toFixed(2)}</li>`;
+                cheapestTotalCost += room.price;
+            });
+
+            modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> $${cheapestTotalCost.toFixed(2)}</p>`;
+            modalHtml += `<button class="btn btn-success mt-2" onclick='bookRooms(${JSON.stringify(cheapestCombinations)})'>Book Cheapest</button>`;
+
+            // Create HTML for Normal Combination
+            modalHtml += '<h5 class="mt-4">Normal Combination</h5><ul class="list-group">';
+            let normalTotalCost = 0;
+
+            normalCombinations.forEach((room, index) => {
+                modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.room_name} (Capacity: ${room.max_people}) - $${room.price.toFixed(2)}</li>`;
+                normalTotalCost += room.price;
+            });
+
+            modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> $${normalTotalCost.toFixed(2)}</p>`;
+            modalHtml += `<button class="btn btn-primary mt-2" onclick='bookRooms(${JSON.stringify(normalCombinations)})'>Book Normal</button>`;
+
+            // Show in modal
+            $('#modalBodyContent').html(modalHtml);
+            $('#searchResultsModal').modal('show');
+        }
+    });
+
+    // Helper function to find the best room combination
+    function findBestCombination(sortedRooms, remainingPeople) {
+        const combination = [];
+        let rooms = [...sortedRooms]; // Create a copy to work with
+        
+        while (remainingPeople > 0 && rooms.length > 0) {
+            // Find the best fitting room (largest capacity that fits remaining people)
+            let roomIndex = rooms.findIndex(r => r.max_people <= remainingPeople);
+            if (roomIndex === -1) {
+                // If no room fits perfectly, take the largest remaining room
+                roomIndex = rooms.length - 1;
+            }
+            
+            const selectedRoom = rooms[roomIndex];
+            combination.push({
+                id: selectedRoom.id,
+                room_name: selectedRoom.room_name,
+                max_people: selectedRoom.max_people,
+                price: parseFloat(selectedRoom.price),
+                room_type: selectedRoom.room_type
+            });
+            
+            remainingPeople -= selectedRoom.max_people;
+            
+            // Remove the used room from consideration
+            rooms.splice(roomIndex, 1);
+        }
+        
+        return combination;
+    }
+});
+
+
         // Populate modal with room details and pre-filled dates
         $('#bookingModal').on('show.bs.modal', function (event) {
-            var button = $(event.relatedTarget); // Button that triggered the modal
-            var roomId = button.data('room-id'); // Extract room ID
-            var roomType = button.data('room-type'); // Extract room type
-            var roomPrice = button.data('room-price'); // Extract room price
-
-            // Get the selected dates from the search form
+            var button = $(event.relatedTarget);
+            var roomId = button.data('room-id');
+            var roomType = button.data('room-type');
+            var roomPrice = button.data('room-price');
             var startDate = $('#startDate').val();
             var endDate = $('#endDate').val();
 
-            // Update the modal's content
             var modal = $(this);
+            modal.find('#roomId').val(roomId); // Set the room ID
             modal.find('#roomType').val(roomType);
             modal.find('#roomPrice').val('$' + roomPrice);
             modal.find('#checkInDate').val(startDate);
@@ -467,28 +543,86 @@ echo '</script>';
 
         // Handle booking form submission
         $('#bookingForm').on('submit', function (e) {
-            e.preventDefault(); // Prevent form redirection
-            alert('Booking confirmed for ' + $('#roomType').val() + ' at ' + $('#roomPrice').val() + ' per night.');
-            $('#bookingModal').modal('hide'); // Close the modal after confirmation
+            e.preventDefault();
+
+            const roomId = $('#roomId').val();
+            const checkInDate = $('#checkInDate').val();
+            const checkOutDate = $('#checkOutDate').val();
+
+            if (!checkInDate || !checkOutDate) {
+                alert('Please select both check-in and check-out dates.');
+                return;
+            }
+
+            bookRoom(roomId, checkInDate, checkOutDate);
+            $('#bookingModal').modal('hide');
         });
+
+        function bookRoom(roomId, checkInDate, checkOutDate) {
+    fetch('book.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            room_ids: [roomId],
+            checkin: checkInDate,
+            checkout: checkOutDate
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Booking confirmed! Reservation ID: ' + data.reservations[0].reservation_id);
+            $('#bookingModal').modal('hide');
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Booking error:', error);
+        alert('There was an issue with your booking.');
+    });
+}
+
+function bookRooms(rooms) {
+    const roomIds = rooms.map(room => room.id);
+    const checkin = document.getElementById('startDate').value;
+    const checkout = document.getElementById('endDate').value;
+
+    if (!checkin || !checkout) {
+        alert("Please select check-in and check-out dates.");
+        return;
+    }
+
+    fetch('book.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            room_ids: roomIds,
+            checkin: checkin,
+            checkout: checkout
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Bookings confirmed! Total cost: $' + data.total_cost);
+            $('#searchResultsModal').modal('hide');
+            // Optionally refresh the page or update UI
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error booking rooms:', error);
+        alert('Failed to book rooms.');
+    });
+}
     </script>
-    <script>
-        $(document).ready(function () {
-            // Attach only to booking form
-            $('#bookingForm').on('submit', function (e) {
-                e.preventDefault();
-                alert('Booking submitted (implement AJAX or redirect)');
-            });
 
-            // Populate booking modal with room info
-            $('.book-btn').on('click', function () {
-                const roomType = $(this).data('room-type');
-                const roomPrice = $(this).data('room-price');
-                $('#roomType').val(roomType);
-                $('#roomPrice').val('$' + roomPrice);
-            });
-        });
+</body>
 
-</body >
-
-</html >
+</html>
