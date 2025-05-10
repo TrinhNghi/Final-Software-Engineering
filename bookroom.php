@@ -1,3 +1,32 @@
+<?php
+session_start();
+require_once('db.php');
+
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/error.log');
+
+$conn = open_database();
+if (!$conn) {
+    error_log('Database connection failed: ' . mysqli_connect_error());
+    die('Database connection failed');
+}
+
+$sql = "SELECT MIN(id) as id, room_name, room_category, room_type, floor, max_people, price, description
+        FROM rooms
+        GROUP BY room_name, room_category, room_type, floor, max_people, price, description";
+$result = $conn->query($sql);
+$rooms = [];
+while ($row = $result->fetch_assoc()) {
+    $rooms[] = $row;
+}
+// Convert the PHP array to a JSON object and pass it to JavaScript
+echo '<script>';
+echo 'var rooms = ' . json_encode($rooms) . ';'; // Convert PHP array to JSON
+echo '</script>';
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -160,21 +189,43 @@
             <h2 class="text-center text-white mb-4">Available Rooms</h2>
             <div class="row">
                 <!-- Example Room Card -->
-                <?php for ($i = 1; $i <= 20; $i++): ?>
+                <?php foreach ($rooms as $room): ?>
                     <div class="col-md-4 mb-4">
-                        <div class="card">
-                            <img src="images/room<?php echo ($i % 3) + 1; ?>.png" class="card-img-top" alt="Room Image">
+                        <div class="card shadow-sm">
+                            <img src="images/room<?php echo ($room['id'] % 3) + 1; ?>.png" class="card-img-top"
+                                alt="Room Image">
                             <div class="card-body">
-                                <h5 class="card-title">Room <?php echo $i; ?></h5>
-                                <p class="card-text">$<?php echo 50 + ($i * 5); ?> per night</p>
-                                <a href="#" class="btn btn-primary" data-toggle="modal" data-target="#bookingModal"
-                                    data-room-id="${room.id}" data-room-type="${room.type}" data-room-price="${room.price}">
-                                    Book Now
-                                </a>
+                                <h5 class="card-title"><?php echo htmlspecialchars($room['room_name']); ?></h5>
+                                <p class="mb-1">
+                                    <strong>Category:</strong> <?php echo htmlspecialchars($room['room_category']); ?>
+                                    &nbsp;|&nbsp;
+                                    <strong>Type:</strong> <?php echo htmlspecialchars($room['room_type']); ?>
+                                </p>
+                                <p class="mb-1">
+                                    <strong>Max People:</strong> <?php echo htmlspecialchars($room['max_people']); ?>
+                                    &nbsp;|&nbsp;
+                                    <strong>Price:</strong> $<?php echo htmlspecialchars($room['price']); ?>/night
+                                </p>
+                                <p class="card-text mt-2">
+                                    <?php echo nl2br(htmlspecialchars($room['description'])); ?>
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <a href="#" class="btn btn-primary book-btn" data-toggle="modal"
+                                        data-target="#bookingModal" data-room-id="<?php echo $room['id']; ?>"
+                                        data-room-type="<?php echo htmlspecialchars($room['room_type']); ?>"
+                                        data-room-price="<?php echo htmlspecialchars($room['price']); ?>">
+                                        Book Now
+                                    </a>
+                                    <?php if (strtolower($room['room_type']) === 'vip'): ?>
+                                        <span class="badge bg-success">VIP</span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     </div>
-                <?php endfor; ?>
+                <?php endforeach; ?>
+
+
             </div>
         </div>
 
@@ -293,73 +344,105 @@
         });
 
         $(document).ready(function () {
-            $('form').on('submit', function (e) {
+            $('form').on('submit', function (e){
                 e.preventDefault();
 
                 const adults = parseInt($('#adults').val());
                 const children = parseInt($('#children').val());
                 const totalPeople = adults + children;
 
-                const rooms = [
-                    { id: 1, type: 'Single', capacity: 1, price: 50 },
-                    { id: 2, type: 'Double', capacity: 2, price: 80 },
-                    { id: 3, type: 'Suite', capacity: 4, price: 150 }
-                ];
-
-                // Check if any room can accommodate all people
-                const suitableRooms = rooms.filter(room => room.capacity >= totalPeople);
+                // Use the dynamically fetched rooms data from PHP
+                // Assuming 'rooms' is already defined via PHP above
+                const suitableRooms = rooms.filter(room => room.max_people >= totalPeople);
 
                 if (suitableRooms.length > 0) {
                     // Display suitable rooms on the right panel
                     let roomHtml = '';
                     suitableRooms.forEach(room => {
                         roomHtml += `
-                            <div class="col-md-4 mb-4">
-                                <div class="card">
-                                <img src="images/room${room.id}.png" class="card-img-top" alt="${room.type}">
-                                <div class="card-body">
-                                    <h5 class="card-title">${room.type} Room</h5>
-                                    <p class="card-text">Capacity: ${room.capacity} | $${room.price} per night</p>
-                                    <a href="#" 
-                    class="btn btn-primary" 
-                    data-toggle="modal" 
-                    data-target="#bookingModal" 
-                    data-room-id="${room.id}" 
-                    data-room-type="${room.type}" 
-                    data-room-price="${room.price}">
-                    Book Now
-                    </a>
-                                </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card shadow-sm">
+                            <img src="images/room${(room.id % 3) + 1}.png" class="card-img-top" alt="Room Image">
+                            <div class="card-body">
+                                <h5 class="card-title">${room.room_name}</h5>
+                                <p class="mb-1">
+                                    <strong>Category:</strong> ${room.room_category} &nbsp;|&nbsp;
+                                    <strong>Type:</strong> ${room.room_type}
+                                </p>
+                                <p class="mb-1">
+                                    <strong>Max People:</strong> ${room.max_people} &nbsp;|&nbsp;
+                                    <strong>Price:</strong> $${room.price}/night
+                                </p>
+                                <p class="card-text mt-2">
+                                    ${room.description}
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <a href="#" class="btn btn-primary book-btn"
+                                       data-toggle="modal"
+                                       data-target="#bookingModal"
+                                       data-room-id="${room.id}"
+                                       data-room-type="${room.room_type}"
+                                       data-room-price="${room.price}">
+                                        Book Now
+                                    </a>
+                                    ${room.room_type.toLowerCase() === 'vip' ? '<span class="badge bg-success">VIP</span>' : ''}
                                 </div>
                             </div>
-                            `;
+                        </div>
+                    </div>
+                `;
                     });
                     $('.display-section .row').html(roomHtml);
                 } else {
                     // Use greedy combination approach and show modal
                     const combinations = [];
                     let remaining = totalPeople;
-                    const sortedRooms = rooms.slice().sort((a, b) => b.capacity - a.capacity);
 
-                    while (remaining > 0) {
-                        const room = sortedRooms.find(r => r.capacity <= remaining) || sortedRooms[sortedRooms.length - 1];
-                        combinations.push(room);
-                        remaining -= room.capacity;
+                    // Cheapest combination logic (sorted by price)
+                    const cheapestRooms = rooms.slice().sort((a, b) => a.price - b.price);
+                    let cheapestRemaining = remaining;
+                    const cheapestCombinations = [];
+
+                    while (cheapestRemaining > 0) {
+                        const room = cheapestRooms.find(r => r.max_people <= cheapestRemaining) || cheapestRooms[cheapestRooms.length - 1];
+                        cheapestCombinations.push(room);
+                        cheapestRemaining -= room.max_people;
                     }
 
-                    let modalHtml = '<ul class="list-group">';
-                    let totalCost = 0;
-                    combinations.forEach((room, index) => {
-                        modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.type} (Capacity: ${room.capacity}) - $${room.price}</li>`;
-                        totalCost += room.price;
+                    // Normal combination logic (sorted by capacity)
+                    const sortedRooms = rooms.slice().sort((a, b) => b.max_people - a.max_people);
+                    let normalRemaining = remaining;
+                    const normalCombinations = [];
+
+                    while (normalRemaining > 0) {
+                        const room = sortedRooms.find(r => r.max_people <= normalRemaining) || sortedRooms[sortedRooms.length - 1];
+                        normalCombinations.push(room);
+                        normalRemaining -= room.max_people;
+                    }
+
+                    // Generate HTML for both options
+                    let modalHtml = '<h5>Cheapest Combination</h5><ul class="list-group">';
+                    let cheapestTotalCost = 0;
+                    cheapestCombinations.forEach((room, index) => {
+                        modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.room_type} (Capacity: ${room.max_people}) - $${room.price}</li>`;
+                        cheapestTotalCost += room.price;
                     });
-                    modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> $${totalCost}</p>`;
+                    modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> $${cheapestTotalCost}</p>`;
+
+                    modalHtml += '<h5 class="mt-4">Normal Combination</h5><ul class="list-group">';
+                    let normalTotalCost = 0;
+                    normalCombinations.forEach((room, index) => {
+                        modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.room_type} (Capacity: ${room.max_people}) - $${room.price}</li>`;
+                        normalTotalCost += room.price;
+                    });
+                    modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> $${normalTotalCost}</p>`;
 
                     $('#modalBodyContent').html(modalHtml);
                     $('#searchResultsModal').modal('show');
+
                 }
-            });
-        });
+            
+        });});
 
     </script>
     <script>
@@ -391,34 +474,21 @@
     </script>
     <script>
         $(document).ready(function () {
-            // Handle search form submission
-            $('#searchForm').on('submit', function (e) {
-                e.preventDefault(); // Prevent form redirection
-
-                // Get the form values
-                const startDate = $('#startDate').val();
-                const endDate = $('#endDate').val();
-                const adults = $('#adults').val();
-                const children = $('#children').val();
-
-                // Populate the modal with the form values
-                $('#modalStartDate').val(startDate);
-                $('#modalEndDate').val(endDate);
-                $('#modalAdults').val(adults);
-                $('#modalChildren').val(children);
-
-                // Show the modal
-                $('#searchResultsModal').modal('show');
+            // Attach only to booking form
+            $('#bookingForm').on('submit', function (e) {
+                e.preventDefault();
+                alert('Booking submitted (implement AJAX or redirect)');
             });
 
-            // Handle booking form submission
-            $('#bookingForm').on('submit', function (e) {
-                e.preventDefault(); // Prevent form redirection
-                alert('Booking confirmed!');
-                $('#searchResultsModal').modal('hide'); // Close the modal
+            // Populate booking modal with room info
+            $('.book-btn').on('click', function () {
+                const roomType = $(this).data('room-type');
+                const roomPrice = $(this).data('room-price');
+                $('#roomType').val(roomType);
+                $('#roomPrice').val('$' + roomPrice);
             });
         });
-    </script>
-</body>
 
-</html>
+</body >
+
+</html >
