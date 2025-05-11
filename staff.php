@@ -25,10 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_POST['action'])) {
             switch ($_POST['action']) {
                 case 'add_booking':
-                    $user_id = (int)$_POST['user_id'];
                     $room_id = (int)$_POST['room_id'];
-                    $checkin_date = $_POST['checkin_date'];
-                    $checkout_date = $_POST['checkout_date'];
+                    $user_id = (int)$_POST['user_id'];
+                    $checkin_date = date('Y-m-d', strtotime($_POST['checkin_date']));
+                    $checkout_date = date('Y-m-d', strtotime($_POST['checkout_date']));
                     $status = $_POST['status'];
                     $payment_status = $_POST['payment_status'];
 
@@ -40,144 +40,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Check room availability
                     $stmt = $pdo->prepare('
                         SELECT COUNT(*) FROM reservation
-                        WHERE room_id = :room_id
-                        AND status != "cancelled"
+                        WHERE room_id = ? AND status != "cancelled"
                         AND (
-                            (:checkin_date BETWEEN checkin_date AND checkout_date)
-                            OR (:checkout_date BETWEEN checkin_date AND checkout_date)
-                            OR (checkin_date BETWEEN :checkin_date AND :checkout_date)
+                            (checkin_date <= ? AND checkout_date > ?)
+                            OR (checkin_date < ? AND checkout_date >= ?)
+                            OR (checkin_date >= ? AND checkout_date <= ?)
                         )
                     ');
-                    $stmt->execute([
-                        'room_id' => $room_id,
-                        'checkin_date' => $checkin_date,
-                        'checkout_date' => $checkout_date
-                    ]);
+                    $stmt->execute([$room_id, $checkin_date, $checkin_date, $checkout_date, $checkout_date, $checkin_date, $checkout_date]);
                     if ($stmt->fetchColumn() > 0) {
-                        throw new Exception('Room is not available for the selected dates.');
+                        throw new Exception('Room is already booked for the selected dates.');
                     }
 
-                    // Insert reservation (total_amount set by existing logic)
+                    // Insert booking
                     $stmt = $pdo->prepare('
                         INSERT INTO reservation (user_id, room_id, checkin_date, checkout_date, status, payment_status)
                         VALUES (?, ?, ?, ?, ?, ?)
                     ');
                     $stmt->execute([$user_id, $room_id, $checkin_date, $checkout_date, $status, $payment_status]);
-                    $reservation_id = $pdo->lastInsertId();
-
-                    // Handle payment if status is 'checked_out' and payment_status is 'paid'
-                    if ($status === 'checked_out' && $payment_status === 'paid') {
-                        $stmt = $pdo->prepare('SELECT total_amount FROM reservation WHERE id = ?');
-                        $stmt->execute([$reservation_id]);
-                        $amount = $stmt->fetchColumn();
-                        $stmt = $pdo->prepare('SELECT balance FROM account WHERE id = ?');
-                        $stmt->execute([$user_id]);
-                        $balance = $stmt->fetchColumn();
-                        if ($balance < $amount) {
-                            // Rollback by deleting reservation
-                            $pdo->prepare('DELETE FROM reservation WHERE id = ?')->execute([$reservation_id]);
-                            throw new Exception('Insufficient balance for payment. Balance: ' . number_format($balance, 0) . ', Required: ' . number_format($amount, 0));
-                        }
-                        $stmt = $pdo->prepare('CALL ProcessPayment(?, ?, ?, ?)');
-                        $stmt->execute([$user_id, $reservation_id, $amount, 'cash']);
-                    }
 
                     $message = 'Booking added successfully.';
                     $message_type = 'success';
-                    // Redirect to checkInOut if status is pending, else stay in manageBooking
-                    $redirect_section = ($status === 'pending') ? 'checkInOut' : 'manageBooking';
-                    header("Location: admin.php?section=$redirect_section");
-                    exit();
                     break;
 
                 case 'edit_booking':
                     $reservation_id = (int)$_POST['reservation_id'];
                     $room_id = (int)$_POST['room_id'];
-                    $checkin_date = $_POST['checkin_date'];
-                    $checkout_date = $_POST['checkout_date'];
+                    $checkin_date = date('Y-m-d', strtotime($_POST['checkin_date']));
+                    $checkout_date = date('Y-m-d', strtotime($_POST['checkout_date']));
                     $status = $_POST['status'];
                     $payment_status = $_POST['payment_status'];
-                    $user_id = (int)$_POST['user_id'];
 
-                    // Validate inputs
+                    // Validate dates
                     if (strtotime($checkin_date) >= strtotime($checkout_date)) {
                         throw new Exception('Check-out date must be after check-in date.');
                     }
-                    if (!in_array($status, ['pending', 'checked_in', 'checked_out', 'cancelled'])) {
-                        throw new Exception('Invalid status.');
-                    }
-                    if (!in_array($payment_status, ['unpaid', 'paid'])) {
-                        throw new Exception('Invalid payment status.');
-                    }
-                    // Verify room_id exists
-                    $stmt = $pdo->prepare('SELECT COUNT(*) FROM rooms WHERE id = ?');
-                    $stmt->execute([$room_id]);
-                    if ($stmt->fetchColumn() == 0) {
-                        throw new Exception('Invalid room selected.');
-                    }
-                    // Verify user_id exists
-                    $stmt = $pdo->prepare('SELECT COUNT(*) FROM account WHERE id = ?');
-                    $stmt->execute([$user_id]);
-                    if ($stmt->fetchColumn() == 0) {
-                        throw new Exception('Invalid user selected.');
+
+                    // Check room availability (excluding current reservation)
+                    $stmt = $pdo->prepare('
+                        SELECT COUNT(*) FROM reservation
+                        WHERE room_id = ? AND id != ? AND status != "cancelled"
+                        AND (
+                            (checkin_date <= ? AND checkout_date > ?)
+                            OR (checkin_date < ? AND checkout_date >= ?)
+                            OR (checkin_date >= ? AND checkout_date <= ?)
+                        )
+                    ');
+                    $stmt->execute([$room_id, $reservation_id, $checkin_date, $checkin_date, $checkout_date, $checkout_date, $checkin_date, $checkout_date]);
+                    if ($stmt->fetchColumn() > 0) {
+                        throw new Exception('Room is already booked for the selected dates.');
                     }
 
-                    // Start transaction
-                    $pdo->beginTransaction();
+                    // Update booking
+                    $stmt = $pdo->prepare('
+                        UPDATE reservation
+                        SET room_id = ?, checkin_date = ?, checkout_date = ?, status = ?, payment_status = ?
+                        WHERE id = ?
+                    ');
+                    $stmt->execute([$room_id, $checkin_date, $checkout_date, $status, $payment_status, $reservation_id]);
 
-                    try {
-                        // Handle payment for checked_out + paid
-                        if ($status === 'checked_out' && $payment_status === 'paid') {
-                            // Fetch current reservation and balance
-                            $stmt = $pdo->prepare('
-                                SELECT r.total_amount, r.payment_status, a.balance
-                                FROM reservation r
-                                JOIN account a ON r.user_id = a.id
-                                WHERE r.id = ?
-                            ');
-                            $stmt->execute([$reservation_id]);
-                            $reservation = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                            if (!$reservation) {
-                                throw new Exception('Reservation or user account not found.');
-                            }
-
-                            // Process payment if not already paid
-                            if ($reservation['payment_status'] !== 'paid') {
-                                $amount = $reservation['total_amount'];
-                                $balance = $reservation['balance'];
-
-                                if ($balance < $amount) {
-                                    throw new Exception(
-                                        'Insufficient balance for payment. ' .
-                                        'Balance: ' . number_format($balance, 0) . ', ' .
-                                        'Required: ' . number_format($amount, 0)
-                                    );
-                                }
-
-                                // Process payment
-                                $stmt = $pdo->prepare('CALL ProcessPayment(?, ?, ?, ?)');
-                                $stmt->execute([$user_id, $reservation_id, $amount, 'cash']);
-                            }
-                        }
-
-                        // Update reservation
-                        $stmt = $pdo->prepare('
-                            UPDATE reservation
-                            SET room_id = ?, checkin_date = ?, checkout_date = ?, status = ?, payment_status = ?
-                            WHERE id = ?
-                        ');
-                        $stmt->execute([$room_id, $checkin_date, $checkout_date, $status, $payment_status, $reservation_id]);
-
-                        // Commit transaction
-                        $pdo->commit();
-                        $message = 'Booking updated successfully.';
-                        $message_type = 'success';
-                    } catch (Exception $e) {
-                        // Rollback transaction
-                        $pdo->rollBack();
-                        throw new Exception('Failed to update booking: ' . $e->getMessage());
-                    }
+                    $message = 'Booking updated successfully.';
+                    $message_type = 'success';
                     break;
 
                 case 'cancel_booking':
@@ -775,7 +698,7 @@ switch ($section) {
     <div class="modal fade" id="addBookingModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-                <form method="POST" onsubmit="return validateBookingForm('add_checkin_date', 'add_checkout_date')">
+                <form method="POST" id="addBookingForm">
                     <div class="modal-header">
                         <h5 class="modal-title">Add New Booking</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -798,7 +721,7 @@ switch ($section) {
                         </div>
                         <div class="form-group">
                             <label for="add_checkin_date">Check-In Date</label>
-                            <input type="date" class="form-control" name="checkin_date" id="add_checkin_date" value="2025-05-11" required>
+                            <input type="date" class="form-control" name="checkin_date" id="add_checkin_date" required>
                         </div>
                         <div class="form-group">
                             <label for="add_checkout_date">Check-Out Date</label>
@@ -808,16 +731,12 @@ switch ($section) {
                             <label for="add_status">Status</label>
                             <select class="form-control" name="status" id="add_status">
                                 <option value="pending">Pending</option>
-                                <option value="checked_in">Checked In</option>
-                                <option value="checked_out">Checked Out</option>
-                                <option value="cancelled">Cancelled</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="add_payment_status">Payment Status</label>
                             <select class="form-control" name="payment_status" id="add_payment_status">
                                 <option value="unpaid">Unpaid</option>
-                                <option value="paid">Paid</option>
                             </select>
                         </div>
                     </div>
@@ -834,7 +753,7 @@ switch ($section) {
     <div class="modal fade" id="editBookingModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-                <form method="POST" onsubmit="return validateBookingForm('edit_checkin_date', 'edit_checkout_date')">
+                <form method="POST" id="editBookingForm">
                     <div class="modal-header">
                         <h5 class="modal-title">Edit Booking</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -844,10 +763,15 @@ switch ($section) {
                     <div class="modal-body">
                         <input type="hidden" name="action" value="edit_booking">
                         <input type="hidden" name="reservation_id" id="edit_reservation_id">
-                        <input type="hidden" name="user_id" id="edit_user_id">
+                        <div class="form-group">
+                            <label for="edit_user_id">Guest</label>
+                            <select class="form-control" name="user_id" id="edit_user_id" required>
+                                <?php echo getUsersOptions($pdo, 0); ?>
+                            </select>
+                        </div>
                         <div class="form-group">
                             <label for="edit_room_id">Room</label>
-                            <select class="form-control" name="room_id" id="edit_room_id">
+                            <select class="form-control" name="room_id" id="edit_room_id" required>
                                 <?php echo getRoomsOptions($pdo, 0); ?>
                             </select>
                         </div>
@@ -904,6 +828,7 @@ switch ($section) {
 
         // Show edit booking modal
         function showEditBookingModal(reservation_id, room_id, checkin_date, checkout_date, status, payment_status, user_id) {
+            // Set form values
             document.getElementById('edit_reservation_id').value = reservation_id;
             document.getElementById('edit_user_id').value = user_id;
             document.getElementById('edit_room_id').value = room_id;
@@ -911,10 +836,48 @@ switch ($section) {
             document.getElementById('edit_checkout_date').value = checkout_date;
             document.getElementById('edit_status').value = status;
             document.getElementById('edit_payment_status').value = payment_status;
+
+            // Date validation setup
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const todayDate = `${yyyy}-${mm}-${dd}`;
+
+            // Calculate max date (1 year from today)
+            const nextYear = new Date(today);
+            nextYear.setFullYear(nextYear.getFullYear() + 1);
+            const maxEndDate = `${nextYear.getFullYear()}-${String(nextYear.getMonth() + 1).padStart(2, '0')}-${String(nextYear.getDate()).padStart(2, '0')}`;
+
+            // Get modal date inputs
+            const modalCheckin = document.getElementById('edit_checkin_date');
+            const modalCheckout = document.getElementById('edit_checkout_date');
+
+            // Set initial constraints
+            modalCheckin.setAttribute('min', todayDate);
+            modalCheckin.setAttribute('max', maxEndDate);
+            modalCheckout.setAttribute('min', todayDate);
+            modalCheckout.setAttribute('max', maxEndDate);
+
+            // Update checkout min date when checkin changes
+            modalCheckin.addEventListener('change', function () {
+                const selectedDate = new Date(this.value);
+                const nextDay = new Date(selectedDate);
+                nextDay.setDate(nextDay.getDate() + 1);
+
+                const nextDayFormatted = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`;
+                modalCheckout.setAttribute('min', nextDayFormatted);
+
+                // Reset checkout if invalid
+                if (new Date(modalCheckout.value) < nextDay) {
+                    modalCheckout.value = '';
+                }
+            });
+
+            // Show modal
             $('#editBookingModal').modal('show');
             return false;
         }
-
         // Validate booking form dates
         function validateBookingForm(checkinId, checkoutId) {
             const checkinDate = document.getElementById(checkinId).value;
@@ -1011,6 +974,225 @@ switch ($section) {
                 }
             });
         }
+        $('#editBookingModal form').on('submit', function (e) {
+            e.preventDefault();
+
+            const formData = $(this).serialize();
+
+            $.ajax({
+                url: 'admin.php',
+                method: 'POST',
+                data: formData,
+                success: function (response) {
+                    // Reload page to see changes
+                    location.reload();
+                },
+                error: function (xhr) {
+                    // Parse error message from response
+                    let errorMsg = 'An error occurred';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.error) {
+                            errorMsg = response.error;
+                        }
+                    } catch (e) {
+                        errorMsg = xhr.responseText || 'Unknown error';
+                    }
+
+                    // Show error in modal
+                    $('#editBookingModal .modal-body').prepend(
+                        `<div class="alert alert-danger">${errorMsg}</div>`
+                    );
+
+                    // Scroll to error
+                    $('html, body').animate({
+                        scrollTop: $('#editBookingModal').offset().top
+                    }, 500);
+                }
+            });
+        });
+
+        function setupAddBookingModal() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const todayDate = `${yyyy}-${mm}-${dd}`;
+
+            // Calculate max date (1 year from today)
+            const nextYear = new Date(today);
+            nextYear.setFullYear(nextYear.getFullYear() + 1);
+            const maxEndDate = `${nextYear.getFullYear()}-${String(nextYear.getMonth() + 1).padStart(2, '0')}-${String(nextYear.getDate()).padStart(2, '0')}`;
+
+            // Get modal date inputs
+            const modalCheckin = document.getElementById('add_checkin_date');
+            const modalCheckout = document.getElementById('add_checkout_date');
+
+            // Set initial constraints
+            modalCheckin.setAttribute('min', todayDate);
+            modalCheckin.setAttribute('max', maxEndDate);
+            modalCheckout.setAttribute('min', todayDate);
+            modalCheckout.setAttribute('max', maxEndDate);
+
+            // Update checkout min date when checkin changes
+            modalCheckin.addEventListener('change', function () {
+                const selectedDate = new Date(this.value);
+                const nextDay = new Date(selectedDate);
+                nextDay.setDate(nextDay.getDate() + 1);
+
+                const nextDayFormatted = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`;
+                modalCheckout.setAttribute('min', nextDayFormatted);
+
+                // Reset checkout if invalid
+                if (new Date(modalCheckout.value) < nextDay) {
+                    modalCheckout.value = '';
+                }
+            });
+
+            // Clear form fields when modal opens
+            $('#addBookingModal').on('show.bs.modal', function () {
+                modalCheckin.value = '';
+                modalCheckout.value = '';
+            });
+
+            // Show modal
+            $('#addBookingModal').modal('show');
+        }
+
+        // Modify the add booking form submission
+        $('#addBookingModal form').on('submit', function (e) {
+            e.preventDefault();
+
+            const form = $(this);
+            const formData = form.serialize();
+            const submitButton = form.find('button[type="submit"]');
+
+            // Disable submit button to prevent double submission
+            submitButton.prop('disabled', true);
+
+            // Clear previous alerts
+            $('#addBookingModal .alert').remove();
+
+            $.ajax({
+                url: 'admin.php',
+                method: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        // Show success message and close modal after delay
+                        $('#addBookingModal .modal-body').prepend(
+                            `<div class="alert alert-success">${response.message}</div>`
+                        );
+
+                        setTimeout(function () {
+                            $('#addBookingModal').modal('hide');
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        // Show error message
+                        $('#addBookingModal .modal-body').prepend(
+                            `<div class="alert alert-danger">${response.error}</div>`
+                        );
+
+                        // Re-enable submit button
+                        submitButton.prop('disabled', false);
+
+                        // Scroll to error
+                        $('html, body').animate({
+                            scrollTop: $('#addBookingModal .alert').offset().top - 20
+                        }, 500);
+                    }
+                },
+                error: function (xhr) {
+                    let errorMsg = 'An error occurred while processing your request.';
+
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.error) {
+                            errorMsg = response.error;
+                        }
+                    } catch (e) {
+                        errorMsg = xhr.responseText || 'Unknown error occurred.';
+                    }
+
+                    // Show error message
+                    $('#addBookingModal .modal-body').prepend(
+                        `<div class="alert alert-danger">${errorMsg}</div>`
+                    );
+
+                    // Re-enable submit button
+                    submitButton.prop('disabled', false);
+
+                    // Scroll to error
+                    $('html, body').animate({
+                        scrollTop: $('#addBookingModal .alert').offset().top - 20
+                    }, 500);
+                }
+            });
+        });
+
+        // Similar update for edit booking form
+        $('#editBookingModal form').on('submit', function (e) {
+            e.preventDefault();
+
+            const form = $(this);
+            const formData = form.serialize();
+            const submitButton = form.find('button[type="submit"]');
+
+            submitButton.prop('disabled', true);
+            $('#editBookingModal .alert').remove();
+
+            $.ajax({
+                url: 'admin.php',
+                method: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        $('#editBookingModal .modal-body').prepend(
+                            `<div class="alert alert-success">${response.message}</div>`
+                        );
+
+                        setTimeout(function () {
+                            $('#editBookingModal').modal('hide');
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        $('#editBookingModal .modal-body').prepend(
+                            `<div class="alert alert-danger">${response.error}</div>`
+                        );
+                        submitButton.prop('disabled', false);
+
+                        $('html, body').animate({
+                            scrollTop: $('#editBookingModal .alert').offset().top - 20
+                        }, 500);
+                    }
+                },
+                error: function (xhr) {
+                    let errorMsg = 'An error occurred while processing your request.';
+
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.error) {
+                            errorMsg = response.error;
+                        }
+                    } catch (e) {
+                        errorMsg = xhr.responseText || 'Unknown error occurred.';
+                    }
+
+                    $('#editBookingModal .modal-body').prepend(
+                        `<div class="alert alert-danger">${errorMsg}</div>`
+                    );
+
+                    submitButton.prop('disabled', false);
+
+                    $('html, body').animate({
+                        scrollTop: $('#editBookingModal .alert').offset().top - 20
+                    }, 500);
+                }
+            });
+        });
     </script>
 </body>
 </html>

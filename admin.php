@@ -25,79 +25,107 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_POST['action'])) {
             switch ($_POST['action']) {
                 case 'add_booking':
-                    $user_id = (int)$_POST['user_id'];
-                    $room_id = (int)$_POST['room_id'];
-                    $checkin_date = $_POST['checkin_date'];
-                    $checkout_date = $_POST['checkout_date'];
-                    $status = $_POST['status'];
-                    $payment_status = $_POST['payment_status'];
+                    try {
+                        $room_id = (int) $_POST['room_id'];
+                        $user_id = (int) $_POST['user_id'];
+                        $checkin_date = date('Y-m-d', strtotime($_POST['checkin_date']));
+                        $checkout_date = date('Y-m-d', strtotime($_POST['checkout_date']));
+                        $status = $_POST['status'];
+                        $payment_status = $_POST['payment_status'];
 
-                    // Validate dates
-                    if (strtotime($checkin_date) >= strtotime($checkout_date)) {
-                        throw new Exception('Check-out date must be after check-in date.');
-                    }
+                        // Validate dates
+                        if (strtotime($checkin_date) >= strtotime($checkout_date)) {
+                            throw new Exception('Check-out date must be after check-in date.');
+                        }
 
-                    // Check room availability
-                    $stmt = $pdo->prepare('
-                        SELECT COUNT(*) FROM reservation
-                        WHERE room_id = :room_id
-                        AND status != "cancelled"
-                        AND (
-                            (:checkin_date BETWEEN checkin_date AND checkout_date)
-                            OR (:checkout_date BETWEEN checkin_date AND checkout_date)
-                            OR (checkin_date BETWEEN :checkin_date AND :checkout_date)
-                        )
-                    ');
-                    $stmt->execute([
-                        'room_id' => $room_id,
-                        'checkin_date' => $checkin_date,
-                        'checkout_date' => $checkout_date
-                    ]);
-                    if ($stmt->fetchColumn() > 0) {
-                        throw new Exception('Room is not available for the selected dates.');
-                    }
+                        // Validate room and user
+                        $stmt = $pdo->prepare('SELECT COUNT(*) FROM rooms WHERE id = ?');
+                        $stmt->execute([$room_id]);
+                        if ($stmt->fetchColumn() == 0) {
+                            throw new Exception('Invalid room selected.');
+                        }
 
-                    // Insert reservation (total_amount set by trigger)
-                    $stmt = $pdo->prepare('
-                        INSERT INTO reservation (user_id, room_id, checkin_date, checkout_date, status, payment_status)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    ');
-                    $stmt->execute([$user_id, $room_id, $checkin_date, $checkout_date, $status, $payment_status]);
-                    $reservation_id = $pdo->lastInsertId();
-
-                    // Handle payment if status is 'checked_out' and payment_status is 'paid'
-                    if ($status === 'checked_out' && $payment_status === 'paid') {
-                        $stmt = $pdo->prepare('SELECT total_amount FROM reservation WHERE id = ?');
-                        $stmt->execute([$reservation_id]);
-                        $amount = $stmt->fetchColumn();
                         $stmt = $pdo->prepare('SELECT balance FROM account WHERE id = ?');
                         $stmt->execute([$user_id]);
-                        $balance = $stmt->fetchColumn();
-                        if ($balance < $amount) {
-                            // Rollback by deleting reservation
-                            $pdo->prepare('DELETE FROM reservation WHERE id = ?')->execute([$reservation_id]);
-                            throw new Exception('Insufficient balance for payment. Balance: ' . number_format($balance, 0) . ', Required: ' . number_format($amount, 0));
+                        $user = $stmt->fetch();
+                        if (!$user) {
+                            throw new Exception('Invalid user selected.');
                         }
-                        $stmt = $pdo->prepare('CALL ProcessPayment(?, ?, ?, ?)');
-                        $stmt->execute([$user_id, $reservation_id, $amount, 'cash']);
-                    }
 
-                    $message = 'Booking added successfully.';
-                    $message_type = 'success';
-                    // Redirect to checkInOut if status is pending, else stay in manageBooking
-                    $redirect_section = ($status === 'pending') ? 'checkInOut' : 'manageBooking';
-                    header("Location: admin.php?section=$redirect_section");
-                    exit();
+                        // Check date conflict
+                        $stmt = $pdo->prepare('
+            SELECT COUNT(*) FROM reservation
+            WHERE room_id = ? AND status != "cancelled"
+            AND (
+                (checkin_date <= ? AND checkout_date > ?)
+                OR (checkin_date < ? AND checkout_date >= ?)
+                OR (checkin_date >= ? AND checkout_date <= ?)
+            )
+        ');
+                        $stmt->execute([
+                            $room_id,
+                            $checkin_date,
+                            $checkin_date,
+                            $checkout_date,
+                            $checkout_date,
+                            $checkin_date,
+                            $checkout_date
+                        ]);
+                        if ($stmt->fetchColumn() > 0) {
+                            throw new Exception('Room is already booked for the selected dates.');
+                        }
+
+                        // Calculate total amount
+                        $stmt = $pdo->prepare('SELECT price_per_day FROM rooms WHERE id = ?');
+                        $stmt->execute([$room_id]);
+                        $room = $stmt->fetch();
+                        if (!$room)
+                            throw new Exception('Room not found.');
+
+                        $days = (strtotime($checkout_date) - strtotime($checkin_date)) / 86400;
+                        $total = $room['price_per_day'] * $days;
+
+                        // Check payment if status is checked_out and marked as paid
+                        if ($status === 'checked_out' && $payment_status === 'paid') {
+                            if ($user['balance'] < $total) {
+                                throw new Exception(
+                                    'Insufficient balance. Balance: $' . number_format($user['balance'], 2) .
+                                    ', Required: $' . number_format($total, 2)
+                                );
+                            }
+
+                            // Deduct balance
+                            $stmt = $pdo->prepare('UPDATE account SET balance = balance - ? WHERE id = ?');
+                            $stmt->execute([$total, $user_id]);
+                        }
+
+                        // Insert booking
+                        $stmt = $pdo->prepare('
+            INSERT INTO reservation (user_id, room_id, checkin_date, checkout_date, status, payment_status, total_amount)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ');
+                        $stmt->execute([$user_id, $room_id, $checkin_date, $checkout_date, $status, $payment_status, $total]);
+
+                        // Return JSON response for AJAX
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true, 'message' => 'Booking added successfully.']);
+                    } catch (Exception $e) {
+                        header('Content-Type: application/json');
+                        http_response_code(400);
+                        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                        exit();
+                    }
                     break;
 
+
                 case 'edit_booking':
-                    $reservation_id = (int)$_POST['reservation_id'];
-                    $room_id = (int)$_POST['room_id'];
-                    $checkin_date = $_POST['checkin_date'];
-                    $checkout_date = $_POST['checkout_date'];
+                    $reservation_id = (int) $_POST['reservation_id'];
+                    $room_id = (int) $_POST['room_id'];
+                    $checkin_date = date('Y-m-d', strtotime($_POST['checkin_date']));
+                    $checkout_date = date('Y-m-d', strtotime($_POST['checkout_date']));
                     $status = $_POST['status'];
                     $payment_status = $_POST['payment_status'];
-                    $user_id = (int)$_POST['user_id'];
+                    $user_id = (int) $_POST['user_id'];
 
                     // Validate inputs
                     if (strtotime($checkin_date) >= strtotime($checkout_date)) {
@@ -109,16 +137,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!in_array($payment_status, ['unpaid', 'paid'])) {
                         throw new Exception('Invalid payment status.');
                     }
-                    // Verify room_id exists
+
+                    // Verify room exists
                     $stmt = $pdo->prepare('SELECT COUNT(*) FROM rooms WHERE id = ?');
                     $stmt->execute([$room_id]);
                     if ($stmt->fetchColumn() == 0) {
                         throw new Exception('Invalid room selected.');
                     }
-                    // Verify user_id exists
-                    $stmt = $pdo->prepare('SELECT COUNT(*) FROM account WHERE id = ?');
+
+                    // Verify user exists and get balance
+                    $stmt = $pdo->prepare('SELECT balance FROM account WHERE id = ?');
                     $stmt->execute([$user_id]);
-                    if ($stmt->fetchColumn() == 0) {
+                    $user = $stmt->fetch();
+                    if (!$user) {
                         throw new Exception('Invalid user selected.');
                     }
 
@@ -126,47 +157,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->beginTransaction();
 
                     try {
-                        // Handle payment for checked_out + paid
+                        // Check room availability (excluding current reservation)
+                        $stmt = $pdo->prepare('
+            SELECT COUNT(*) FROM reservation
+            WHERE room_id = ? 
+            AND id != ?
+            AND status != "cancelled"
+            AND (
+                (checkin_date <= ? AND checkout_date > ?)
+                OR (checkin_date < ? AND checkout_date >= ?)
+                OR (checkin_date >= ? AND checkout_date <= ?)
+            )
+        ');
+                        $stmt->execute([
+                            $room_id,
+                            $reservation_id,
+                            $checkin_date,
+                            $checkin_date,
+                            $checkout_date,
+                            $checkout_date,
+                            $checkin_date,
+                            $checkout_date
+                        ]);
+
+                        if ($stmt->fetchColumn() > 0) {
+                            throw new Exception('Room is already booked for the selected dates.');
+                        }
+
+                        // Handle payment for checked_out status
                         if ($status === 'checked_out' && $payment_status === 'paid') {
-                            // Fetch current reservation and balance
-                            $stmt = $pdo->prepare('
-                                SELECT r.total_amount, r.payment_status, a.balance
-                                FROM reservation r
-                                JOIN account a ON r.user_id = a.id
-                                WHERE r.id = ?
-                            ');
+                            // Get reservation total amount
+                            $stmt = $pdo->prepare('SELECT total_amount FROM reservation WHERE id = ?');
                             $stmt->execute([$reservation_id]);
-                            $reservation = $stmt->fetch(PDO::FETCH_ASSOC);
+                            $reservation = $stmt->fetch();
 
                             if (!$reservation) {
-                                throw new Exception('Reservation or user account not found.');
+                                throw new Exception('Reservation not found.');
                             }
 
-                            // Process payment if not already paid
-                            if ($reservation['payment_status'] !== 'paid') {
-                                $amount = $reservation['total_amount'];
-                                $balance = $reservation['balance'];
+                            $amount = $reservation['total_amount'];
+                            $balance = $user['balance'];
 
-                                if ($balance < $amount) {
-                                    throw new Exception(
-                                        'Insufficient balance for payment. ' .
-                                        'Balance: ' . number_format($balance, 0) . ', ' .
-                                        'Required: ' . number_format($amount, 0)
-                                    );
-                                }
-
-                                // Process payment
-                                $stmt = $pdo->prepare('CALL ProcessPayment(?, ?, ?, ?)');
-                                $stmt->execute([$user_id, $reservation_id, $amount, 'cash']);
+                            if ($balance < $amount) {
+                                throw new Exception(
+                                    'Insufficient balance for payment. ' .
+                                    'Balance: $' . number_format($balance, 2) . ', ' .
+                                    'Required: $' . number_format($amount, 2)
+                                );
                             }
+
+                            // Process payment
+                            $stmt = $pdo->prepare('UPDATE account SET balance = balance - ? WHERE id = ?');
+                            $stmt->execute([$amount, $user_id]);
                         }
 
                         // Update reservation
                         $stmt = $pdo->prepare('
-                            UPDATE reservation
-                            SET room_id = ?, checkin_date = ?, checkout_date = ?, status = ?, payment_status = ?
-                            WHERE id = ?
-                        ');
+            UPDATE reservation
+            SET room_id = ?, checkin_date = ?, checkout_date = ?, status = ?, payment_status = ?
+            WHERE id = ?
+        ');
                         $stmt->execute([$room_id, $checkin_date, $checkout_date, $status, $payment_status, $reservation_id]);
 
                         // Commit transaction
@@ -181,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
 
                 case 'cancel_booking':
-                    $reservation_id = (int)$_POST['reservation_id'];
+                    $reservation_id = (int) $_POST['reservation_id'];
                     $stmt = $pdo->prepare('UPDATE reservation SET status = "cancelled" WHERE id = ?');
                     $stmt->execute([$reservation_id]);
                     $message = 'Booking cancelled successfully.';
@@ -189,43 +239,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
 
                 case 'approve_request':
-                    $request_id = (int)$_POST['request_id'];
+                    $request_id = (int) $_POST['request_id'];
+                    $reservation_id = (int) $_POST['reservation_id'];
 
                     // Start transaction
                     $pdo->beginTransaction();
 
                     try {
-                        // Fetch request details
-                        $stmt = $pdo->prepare('
-                            SELECT r.service_id, r.reservation_id, s.price
-                            FROM request r
-                            LEFT JOIN service s ON r.service_id = s.id
-                            WHERE r.id = ?
-                        ');
-                        $stmt->execute([$request_id]);
-                        $request = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                        if (!$request) {
-                            throw new Exception('Request not found.');
-                        }
-
                         // Update request status to approved
                         $stmt = $pdo->prepare('UPDATE request SET status = "approved" WHERE id = ?');
                         $stmt->execute([$request_id]);
 
-                        // If there's a reservation_id and service price, update reservation total_amount
-                        if ($request['reservation_id'] && $request['price']) {
-                            $stmt = $pdo->prepare('
-                                UPDATE reservation
-                                SET total_amount = total_amount + ?
-                                WHERE id = ?
-                            ');
-                            $stmt->execute([$request['price'], $request['reservation_id']]);
+                        // Fetch service price and current total_amount
+                        $stmt = $pdo->prepare('
+                            SELECT s.price, r.total_amount
+                            FROM request req
+                            JOIN service s ON req.service_id = s.id
+                            JOIN reservation r ON req.reservation_id = r.id
+                            WHERE req.id = ? AND req.reservation_id = ?
+                        ');
+                        $stmt->execute([$request_id, $reservation_id]);
+                        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$result) {
+                            throw new Exception('Service or reservation not found.');
                         }
+
+                        $service_price = $result['price'];
+                        $current_total = $result['total_amount'];
+                        $new_total = $current_total + $service_price;
+
+                        // Update reservation total_amount
+                        $stmt = $pdo->prepare('UPDATE reservation SET total_amount = ? WHERE id = ?');
+                        $stmt->execute([$new_total, $reservation_id]);
 
                         // Commit transaction
                         $pdo->commit();
-                        $message = 'Request approved successfully.';
+                        $message = 'Request approved and reservation amount updated successfully.';
                         $message_type = 'success';
                     } catch (Exception $e) {
                         // Rollback transaction
@@ -235,7 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
 
                 case 'reject_request':
-                    $request_id = (int)$_POST['request_id'];
+                    $request_id = (int) $_POST['request_id'];
                     $stmt = $pdo->prepare('UPDATE request SET status = "rejected" WHERE id = ?');
                     $stmt->execute([$request_id]);
                     $message = 'Request rejected successfully.';
@@ -243,15 +293,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
 
                 case 'check_in':
-                    $reservation_id = (int)$_POST['reservation_id'];
-                    $stmt = $pdo->prepare('UPDATE reservation SET status = "checked_in", payment_status = "unpaid" WHERE id = ?');
+                    $reservation_id = (int) $_POST['reservation_id'];
+                    $stmt = $pdo->prepare('UPDATE reservation SET status = "checked_in" WHERE id = ?');
                     $stmt->execute([$reservation_id]);
                     $message = 'Check-in confirmed successfully.';
                     $message_type = 'success';
                     break;
 
                 case 'check_out':
-                    $reservation_id = (int)$_POST['reservation_id'];
+                    $reservation_id = (int) $_POST['reservation_id'];
 
                     // Start transaction
                     $pdo->beginTransaction();
@@ -305,9 +355,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw $e;
                     }
                     break;
+                case 'add_staff':
+                    $firstname = trim($_POST['firstname']);
+                    $lastname = trim($_POST['lastname']);
+                    $email = trim($_POST['email']);
+                    $phone = trim($_POST['phone']);
+                    $role = trim($_POST['role']);
+
+                    // Validate inputs
+                    if (empty($firstname) || empty($lastname)) {
+                        throw new Exception('First name and last name are required.');
+                    }
+                    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        throw new Exception('Invalid email format.');
+                    }
+                    if (!in_array($role, ['manager', 'receptionist', 'housekeeping', 'other'])) {
+                        throw new Exception('Invalid role.');
+                    }
+                    if (!empty($phone) && !preg_match('/^[0-9]{10,15}$/', $phone)) {
+                        throw new Exception('Invalid phone number format.');
+                    }
+
+                    // Check email uniqueness
+                    $stmt = $pdo->prepare('SELECT COUNT(*) FROM staff WHERE email = ?');
+                    $stmt->execute([$email]);
+                    if ($stmt->fetchColumn() > 0) {
+                        throw new Exception('Email is already in use.');
+                    }
+
+                    // Start transaction
+                    $pdo->beginTransaction();
+
+                    try {
+                        // Insert staff
+                        $stmt = $pdo->prepare('
+                                INSERT INTO staff (firstname, lastname, email, phone, role)
+                                VALUES (?, ?, ?, ?, ?)
+                            ');
+                        $stmt->execute([$firstname, $lastname, $email, $phone ?: null, $role]);
+
+                        // Commit transaction
+                        $pdo->commit();
+                        $message = 'Staff added successfully.';
+                        $message_type = 'success';
+                    } catch (Exception $e) {
+                        // Rollback transaction
+                        $pdo->rollBack();
+                        throw new Exception('Failed to add staff: ' . $e->getMessage());
+                    }
+                    break;
 
                 case 'edit_staff':
-                    $staff_id = (int)$_POST['staff_id'];
+                    $staff_id = (int) $_POST['staff_id'];
                     $firstname = trim($_POST['firstname']);
                     $lastname = trim($_POST['lastname']);
                     $email = trim($_POST['email']);
@@ -337,7 +436,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
 
                 case 'delete_staff':
-                    $staff_id = (int)$_POST['staff_id'];
+                    $staff_id = (int) $_POST['staff_id'];
                     $stmt = $pdo->prepare('DELETE FROM staff WHERE id = ?');
                     $stmt->execute([$staff_id]);
                     $message = 'Staff deleted successfully.';
@@ -345,22 +444,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
 
                 case 'send_service_request':
-                    $service_id = (int)$_POST['service_id'];
-                    $reservation_id = !empty($_POST['reservation_id']) ? (int)$_POST['reservation_id'] : null;
+                    $service_id = (int) $_POST['service_id'];
+                    $reservation_id = !empty($_POST['reservation_id']) ? (int) $_POST['reservation_id'] : null;
                     $request_details = trim($_POST['request_details']);
                     $user_id = 1; // Admin user_id (admin123)
 
-                    // Validate reservation_id if provided
-                    if ($reservation_id) {
-                        $stmt = $pdo->prepare('SELECT status FROM reservation WHERE id = ?');
-                        $stmt->execute([$reservation_id]);
-                        $reservation = $stmt->fetch(PDO::FETCH_ASSOC);
-                        if (!$reservation || $reservation['status'] !== 'checked_in') {
-                            throw new Exception('Selected reservation is not checked in.');
-                        }
-                    }
-
-                    // Insert service request
                     $stmt = $pdo->prepare('
                         INSERT INTO request (user_id, service_id, reservation_id, request_type, request_details, status)
                         VALUES (?, ?, ?, "service", ?, "pending")
@@ -376,14 +464,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message_type = 'danger';
     }
 
-    // Redirect to current section (unless overridden in add_booking)
+    // Redirect to current section
     $section = isset($_GET['section']) ? $_GET['section'] : 'dashboard';
     header("Location: admin.php?section=$section");
     exit();
 }
 
 // Function to fetch bookings
-function getBookings($pdo) {
+function getBookings($pdo)
+{
     try {
         $stmt = $pdo->query('
             SELECT r.id, a.id AS user_id, a.firstname, a.lastname, ro.id AS room_id, ro.room_number, ro.room_name, r.checkin_date, r.checkout_date, r.total_amount, r.status, r.payment_status
@@ -429,7 +518,8 @@ function getBookings($pdo) {
 }
 
 // Function to fetch service requests
-function getServiceRequests($pdo) {
+function getServiceRequests($pdo)
+{
     try {
         $stmt = $pdo->query('
             SELECT req.id, a.firstname, a.lastname, ro.room_number, s.service_name, s.price, req.request_type, req.request_details, req.status, r.id AS reservation_id
@@ -468,6 +558,7 @@ function getServiceRequests($pdo) {
                         <form method="POST" style="display:inline;">
                             <input type="hidden" name="action" value="approve_request">
                             <input type="hidden" name="request_id" value="' . $row['id'] . '">
+                            <input type="hidden" name="reservation_id" value="' . $row['reservation_id'] . '">
                             <button type="submit" class="btn btn-success btn-sm ' . $buttonDisabled . '">Approve</button>
                         </form>
                         <form method="POST" style="display:inline;">
@@ -486,7 +577,8 @@ function getServiceRequests($pdo) {
 }
 
 // Function to fetch staff
-function getStaff($pdo) {
+function getStaff($pdo)
+{
     try {
         $stmt = $pdo->query('
             SELECT id, firstname, lastname, email, phone, role, created_at
@@ -525,89 +617,20 @@ function getStaff($pdo) {
 }
 
 // Function to fetch reports
-function getReports($pdo) {
+function getReports($pdo)
+{
     try {
         $stmt = $pdo->query('
-            SELECT mrd.month, r.room_number, r.room_name, 
-                   mrd.total_checkin AS bookings, 
-                   mrd.total_money AS total_revenue
-            FROM monthly_room_data mrd
-            JOIN rooms r ON mrd.room_id = r.id
-            WHERE mrd.month IS NOT NULL
-            ORDER BY mrd.month DESC, r.room_number ASC
-            LIMIT 50
+            SELECT month, SUM(total_checkin) AS total_checkins, SUM(total_money) AS total_revenue
+            FROM monthly_room_data
+            GROUP BY month
+            ORDER BY month DESC
+            LIMIT 5
         ');
-        
-        $report = '<h4>Monthly Venue Report</h4>';
-        $current_month = '';
-        $rows = '';
-        $monthly_totals = [];
-        
+        $report = '<strong>Monthly Revenue Report:</strong><br>';
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            // Start a new month section if month changes
-            if ($current_month !== $row['month']) {
-                if ($rows) {
-                    // Close previous month table
-                    $report .= '
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Room Number</th>
-                                    <th>Room Name</th>
-                                    <th>Bookings</th>
-                                    <th>Total Revenue</th>
-                                </tr>
-                            </thead>
-                            <tbody>' . $rows . '
-                                <tr>
-                                    <td colspan="2"><strong>Total for ' . $current_month . '</strong></td>
-                                    <td><strong>' . ($monthly_totals[$current_month]['bookings'] ?? 0) . '</strong></td>
-                                    <td><strong>' . number_format($monthly_totals[$current_month]['revenue'] ?? 0, 0) . '</strong></td>
-                                </tr>
-                            </tbody>
-                        </table>';
-                }
-                $current_month = $row['month'];
-                $rows = '';
-                $report .= '<h5>Month: ' . $row['month'] . '</h5>';
-            }
-            
-            // Add row data
-            $rows .= '
-                <tr>
-                    <td>' . $row['room_number'] . '</td>
-                    <td>' . htmlspecialchars($row['room_name']) . '</td>
-                    <td>' . $row['bookings'] . '</td>
-                    <td>' . number_format($row['total_revenue'], 0) . '</td>
-                </tr>';
-            
-            // Update monthly totals
-            $monthly_totals[$current_month]['bookings'] = ($monthly_totals[$current_month]['bookings'] ?? 0) + $row['bookings'];
-            $monthly_totals[$current_month]['revenue'] = ($monthly_totals[$current_month]['revenue'] ?? 0) + $row['total_revenue'];
+            $report .= 'Month ' . $row['month'] . ': ' . $row['total_checkins'] . ' bookings, Total Revenue: ' . number_format($row['total_revenue'], 0) . '<br>';
         }
-        
-        // Add final month table
-        if ($rows) {
-            $report .= '
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Room Number</th>
-                            <th>Room Name</th>
-                            <th>Bookings</th>
-                            <th>Total Revenue</th>
-                        </tr>
-                    </thead>
-                    <tbody>' . $rows . '
-                        <tr>
-                            <td colspan="2"><strong>Total for ' . $current_month . '</strong></td>
-                            <td><strong>' . ($monthly_totals[$current_month]['bookings'] ?? 0) . '</strong></td>
-                            <td><strong>' . number_format($monthly_totals[$current_month]['revenue'] ?? 0, 0) . '</strong></td>
-                        </tr>
-                    </tbody>
-                </table>';
-        }
-        
         return $report ?: '<strong>No data available.</strong>';
     } catch (PDOException $e) {
         return '<strong>Error: ' . $e->getMessage() . '</strong>';
@@ -615,7 +638,8 @@ function getReports($pdo) {
 }
 
 // Function to fetch rooms for edit/add form
-function getRoomsOptions($pdo, $selected_room_id) {
+function getRoomsOptions($pdo, $selected_room_id)
+{
     try {
         $stmt = $pdo->query('SELECT id, room_number, room_name FROM rooms ORDER BY room_number');
         $options = '';
@@ -630,7 +654,8 @@ function getRoomsOptions($pdo, $selected_room_id) {
 }
 
 // Function to fetch users for add/edit booking
-function getUsersOptions($pdo, $selected_user_id) {
+function getUsersOptions($pdo, $selected_user_id)
+{
     try {
         $stmt = $pdo->query('SELECT id, firstname, lastname FROM account ORDER BY lastname, firstname');
         $options = '';
@@ -645,7 +670,8 @@ function getUsersOptions($pdo, $selected_user_id) {
 }
 
 // Function to fetch services for service request
-function getServicesOptions($pdo, $selected_service_id) {
+function getServicesOptions($pdo, $selected_service_id)
+{
     try {
         $stmt = $pdo->query('SELECT id, service_name, price FROM service ORDER BY service_name');
         $options = '';
@@ -660,15 +686,15 @@ function getServicesOptions($pdo, $selected_service_id) {
 }
 
 // Function to fetch reservations for service request
-function getReservationsOptions($pdo, $selected_reservation_id) {
+function getReservationsOptions($pdo, $selected_reservation_id)
+{
     try {
         $stmt = $pdo->query('
             SELECT r.id, a.firstname, a.lastname, ro.room_name
             FROM reservation r
             JOIN account a ON r.user_id = a.id
             JOIN rooms ro ON r.room_id = ro.id
-            WHERE r.status = "checked_in"
-            ORDER BY r.id ASC
+            ORDER BY r.checkin_date
         ');
         $options = '<option value="">None</option>';
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -690,7 +716,7 @@ switch ($section) {
         $content = '
             <h2>Manage Booking</h2>
             <p>View, edit, or cancel bookings.</p>
-            <button class="btn btn-primary mb-3" data-toggle="modal" data-target="#addBookingModal">Add New Booking</button>
+            <button class="btn btn-primary mb-3" onclick="setupAddBookingModal()">Add New Booking</button>
             <table class="table table-bordered">
                 <thead>
                     <tr>
@@ -713,27 +739,28 @@ switch ($section) {
         break;
     case 'manageStaff':
         $content = '
-            <h2>Manage Staff</h2>
-            <p>View, edit, or remove staff members.</p>
-            <button class="btn btn-primary mb-3">Add New Staff</button>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Role</th>
-                        <th>Created At</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ' . getStaff($pdo) . '
-                </tbody>
-            </table>
-        ';
+                <h2>Manage Staff</h2>
+                <p>View, add, edit, or remove staff members.</p>
+                <button class="btn btn-primary mb-3" data-toggle="modal" data-target="#addStaffModal">Add New Staff</button>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Role</th>
+                            <th>Created At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ' . getStaff($pdo) . '
+                    </tbody>
+                </table>
+            ';
         break;
+
     case 'manageService':
         $content = '
             <h2>Manage Service Requests</h2>
@@ -808,11 +835,11 @@ switch ($section) {
     case 'reports':
         $content = '
             <h2>Reports</h2>
-            <p>View monthly venue performance by room.</p>
+            <p>View system reports and analytics.</p>
             <div class="mb-3">
                 <label for="reportType">Choose Report Type:</label>
                 <select class="form-control" id="reportType">
-                    <option>Monthly Venue Performance</option>
+                    <option>Monthly Revenue</option>
                 </select>
             </div>
             <button class="btn btn-primary mb-4">Generate Report</button>
@@ -832,6 +859,7 @@ switch ($section) {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -927,11 +955,36 @@ switch ($section) {
         .section-box {
             background: white;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             padding: 15px;
+        }
+
+        /* Add this to your existing CSS */
+        .modal .alert {
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-body {
+            position: relative;
+            overflow-y: auto;
+            max-height: calc(100vh - 200px);
         }
     </style>
 </head>
+
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg">
@@ -939,7 +992,8 @@ switch ($section) {
             <a class="navbar-brand" href="?section=dashboard">
                 <i class="fa fa-home" style="font-size: 24px;"></i> Admin Dashboard
             </a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
@@ -983,7 +1037,7 @@ switch ($section) {
     <div class="modal fade" id="addBookingModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-                <form method="POST" onsubmit="return validateBookingForm('add_checkin_date', 'add_checkout_date')">
+                <form method="POST">
                     <div class="modal-header">
                         <h5 class="modal-title">Add New Booking</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -991,6 +1045,7 @@ switch ($section) {
                         </button>
                     </div>
                     <div class="modal-body">
+                        <div id="addBookingAlerts"></div>
                         <input type="hidden" name="action" value="add_booking">
                         <div class="form-group">
                             <label for="add_user_id">Guest</label>
@@ -1006,26 +1061,23 @@ switch ($section) {
                         </div>
                         <div class="form-group">
                             <label for="add_checkin_date">Check-In Date</label>
-                            <input type="date" class="form-control" name="checkin_date" id="add_checkin_date" value="2025-05-11" required>
+                            <input type="date" class="form-control" name="checkin_date" id="add_checkin_date" required>
                         </div>
                         <div class="form-group">
                             <label for="add_checkout_date">Check-Out Date</label>
-                            <input type="date" class="form-control" name="checkout_date" id="add_checkout_date" required>
+                            <input type="date" class="form-control" name="checkout_date" id="add_checkout_date"
+                                required>
                         </div>
                         <div class="form-group">
                             <label for="add_status">Status</label>
                             <select class="form-control" name="status" id="add_status">
                                 <option value="pending">Pending</option>
-                                <option value="checked_in">Checked In</option>
-                                <option value="checked_out">Checked Out</option>
-                                <option value="cancelled">Cancelled</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="add_payment_status">Payment Status</label>
                             <select class="form-control" name="payment_status" id="add_payment_status">
                                 <option value="unpaid">Unpaid</option>
-                                <option value="paid">Paid</option>
                             </select>
                         </div>
                     </div>
@@ -1042,7 +1094,7 @@ switch ($section) {
     <div class="modal fade" id="editBookingModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-                <form method="POST" onsubmit="return validateBookingForm('edit_checkin_date', 'edit_checkout_date')">
+                <form method="POST">
                     <div class="modal-header">
                         <h5 class="modal-title">Edit Booking</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -1050,6 +1102,7 @@ switch ($section) {
                         </button>
                     </div>
                     <div class="modal-body">
+                        <div id="addBookingAlerts"></div>
                         <input type="hidden" name="action" value="edit_booking">
                         <input type="hidden" name="reservation_id" id="edit_reservation_id">
                         <input type="hidden" name="user_id" id="edit_user_id">
@@ -1065,7 +1118,8 @@ switch ($section) {
                         </div>
                         <div class="form-group">
                             <label for="edit_checkout_date">Check-Out Date</label>
-                            <input type="date" class="form-control" name="checkout_date" id="edit_checkout_date" required>
+                            <input type="date" class="form-control" name="checkout_date" id="edit_checkout_date"
+                                required>
                         </div>
                         <div class="form-group">
                             <label for="edit_status">Status</label>
@@ -1087,6 +1141,56 @@ switch ($section) {
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                         <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Staff Modal -->
+    <div class="modal fade" id="addStaffModal" tabindex="-1" role="dialog" aria-labelledby="addStaffModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form method="POST" id="addStaffForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addStaffModalLabel">Add New Staff</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="add_staff">
+                        <div class="form-group">
+                            <label for="add_firstname">First Name</label>
+                            <input type="text" class="form-control" name="firstname" id="add_firstname" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="add_lastname">Last Name</label>
+                            <input type="text" class="form-control" name="lastname" id="add_lastname" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="add_email">Email</label>
+                            <input type="email" class="form-control" name="email" id="add_email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="add_phone">Phone</label>
+                            <input type="text" class="form-control" name="phone" id="add_phone" pattern="[0-9]{10,15}"
+                                placeholder="e.g., 0123456789">
+                        </div>
+                        <div class="form-group">
+                            <label for="add_role">Role</label>
+                            <select class="form-control" name="role" id="add_role" required>
+                                <option value="manager">Manager</option>
+                                <option value="receptionist">Receptionist</option>
+                                <option value="housekeeping">Housekeeping</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Add Staff</button>
                     </div>
                 </form>
             </div>
@@ -1144,7 +1248,7 @@ switch ($section) {
 
     <script>
         // Update sidebar link highlighting
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const section = '<?php echo $section; ?>';
             const links = document.querySelectorAll('.sidebar a');
             links.forEach(link => {
@@ -1161,6 +1265,7 @@ switch ($section) {
 
         // Show edit booking modal
         function showEditBookingModal(reservation_id, room_id, checkin_date, checkout_date, status, payment_status, user_id) {
+            // Set form values
             document.getElementById('edit_reservation_id').value = reservation_id;
             document.getElementById('edit_user_id').value = user_id;
             document.getElementById('edit_room_id').value = room_id;
@@ -1168,6 +1273,45 @@ switch ($section) {
             document.getElementById('edit_checkout_date').value = checkout_date;
             document.getElementById('edit_status').value = status;
             document.getElementById('edit_payment_status').value = payment_status;
+
+            // Date validation setup
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const todayDate = `${yyyy}-${mm}-${dd}`;
+
+            // Calculate max date (1 year from today)
+            const nextYear = new Date(today);
+            nextYear.setFullYear(nextYear.getFullYear() + 1);
+            const maxEndDate = `${nextYear.getFullYear()}-${String(nextYear.getMonth() + 1).padStart(2, '0')}-${String(nextYear.getDate()).padStart(2, '0')}`;
+
+            // Get modal date inputs
+            const modalCheckin = document.getElementById('edit_checkin_date');
+            const modalCheckout = document.getElementById('edit_checkout_date');
+
+            // Set initial constraints
+            modalCheckin.setAttribute('min', todayDate);
+            modalCheckin.setAttribute('max', maxEndDate);
+            modalCheckout.setAttribute('min', todayDate);
+            modalCheckout.setAttribute('max', maxEndDate);
+
+            // Update checkout min date when checkin changes
+            modalCheckin.addEventListener('change', function () {
+                const selectedDate = new Date(this.value);
+                const nextDay = new Date(selectedDate);
+                nextDay.setDate(nextDay.getDate() + 1);
+
+                const nextDayFormatted = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`;
+                modalCheckout.setAttribute('min', nextDayFormatted);
+
+                // Reset checkout if invalid
+                if (new Date(modalCheckout.value) < nextDay) {
+                    modalCheckout.value = '';
+                }
+            });
+
+            // Show modal
             $('#editBookingModal').modal('show');
             return false;
         }
@@ -1184,31 +1328,13 @@ switch ($section) {
             return false;
         }
 
-        // Validate booking form dates
-        function validateBookingForm(checkinId, checkoutId) {
-            const checkinDate = document.getElementById(checkinId).value;
-            const checkoutDate = document.getElementById(checkoutId).value;
-            if (checkinDate && checkoutDate) {
-                if (new Date(checkoutDate) <= new Date(checkinDate)) {
-                    alert('Reminder: Check-out date must be after check-in date.');
-                    return false;
-                }
-            }
-            return true;
-        }
-
         // Populate check-in and check-out data
         function populateCheckInOut() {
             $.ajax({
                 url: 'check_in_out_data.php',
                 method: 'GET',
                 dataType: 'json',
-                success: function(data) {
-                    if (!data || typeof data !== 'object') {
-                        $('#pendingCheckIns').html('<p>Error: Invalid data received from server.</p>');
-                        $('#waitingCheckOuts').html('<p>Error: Invalid data received from server.</p>');
-                        return;
-                    }
+                success: function (data) {
                     if (data.error) {
                         $('#pendingCheckIns').html('<p>Error: ' + data.error + '</p>');
                         $('#waitingCheckOuts').html('<p>Error: ' + data.error + '</p>');
@@ -1220,7 +1346,7 @@ switch ($section) {
                     if (data.checkIns.length === 0) {
                         checkInsHtml = '<p>No pending check-ins.</p>';
                     } else {
-                        data.checkIns.forEach(function(item) {
+                        data.checkIns.forEach(function (item) {
                             checkInsHtml += `
                                 <div class="card mb-3">
                                     <div class="card-body">
@@ -1244,7 +1370,7 @@ switch ($section) {
                     if (data.checkOuts.length === 0) {
                         checkOutsHtml = '<p>No pending check-outs.</p>';
                     } else {
-                        data.checkOuts.forEach(function(item) {
+                        data.checkOuts.forEach(function (item) {
                             checkOutsHtml += `
                                 <div class="card mb-3">
                                     <div class="card-body">
@@ -1263,23 +1389,235 @@ switch ($section) {
                     }
                     $('#waitingCheckOuts').html(checkOutsHtml);
                 },
-                error: function(xhr, status, error) {
-                    let errorMessage = 'Error: Failed to load data. ';
-                    if (xhr.status) {
-                        errorMessage += `Status: ${xhr.status} (${xhr.statusText}). `;
-                    }
-                    errorMessage += `Details: ${error}`;
-                    console.error('AJAX Error:', {
-                        status: xhr.status,
-                        statusText: xhr.statusText,
-                        error: error,
-                        responseText: xhr.responseText
-                    });
-                    $('#pendingCheckIns').html(`<p>${errorMessage}</p>`);
-                    $('#waitingCheckOuts').html(`<p>${errorMessage}</p>`);
+                error: function (xhr, status, error) {
+                    $('#pendingCheckIns').html('<p>Error: Failed to load data.</p>');
+                    $('#waitingCheckOuts').html('<p>Error: Failed to load data.</p>');
                 }
             });
         }
+
+        // Modify your form submission to handle errors better
+        $('#editBookingModal form').on('submit', function (e) {
+            e.preventDefault();
+
+            const formData = $(this).serialize();
+
+            $.ajax({
+                url: 'admin.php',
+                method: 'POST',
+                data: formData,
+                success: function (response) {
+                    // Reload page to see changes
+                    location.reload();
+                },
+                error: function (xhr) {
+                    // Parse error message from response
+                    let errorMsg = 'An error occurred';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.error) {
+                            errorMsg = response.error;
+                        }
+                    } catch (e) {
+                        errorMsg = xhr.responseText || 'Unknown error';
+                    }
+
+                    // Show error in modal
+                    $('#editBookingModal .modal-body').prepend(
+                        `<div class="alert alert-danger">${errorMsg}</div>`
+                    );
+
+                    // Scroll to error
+                    $('html, body').animate({
+                        scrollTop: $('#editBookingModal').offset().top
+                    }, 500);
+                }
+            });
+        });
+
+        function setupAddBookingModal() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const todayDate = `${yyyy}-${mm}-${dd}`;
+
+            // Calculate max date (1 year from today)
+            const nextYear = new Date(today);
+            nextYear.setFullYear(nextYear.getFullYear() + 1);
+            const maxEndDate = `${nextYear.getFullYear()}-${String(nextYear.getMonth() + 1).padStart(2, '0')}-${String(nextYear.getDate()).padStart(2, '0')}`;
+
+            // Get modal date inputs
+            const modalCheckin = document.getElementById('add_checkin_date');
+            const modalCheckout = document.getElementById('add_checkout_date');
+
+            // Set initial constraints
+            modalCheckin.setAttribute('min', todayDate);
+            modalCheckin.setAttribute('max', maxEndDate);
+            modalCheckout.setAttribute('min', todayDate);
+            modalCheckout.setAttribute('max', maxEndDate);
+
+            // Update checkout min date when checkin changes
+            modalCheckin.addEventListener('change', function () {
+                const selectedDate = new Date(this.value);
+                const nextDay = new Date(selectedDate);
+                nextDay.setDate(nextDay.getDate() + 1);
+
+                const nextDayFormatted = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`;
+                modalCheckout.setAttribute('min', nextDayFormatted);
+
+                // Reset checkout if invalid
+                if (new Date(modalCheckout.value) < nextDay) {
+                    modalCheckout.value = '';
+                }
+            });
+
+            // Clear form fields when modal opens
+            $('#addBookingModal').on('show.bs.modal', function () {
+                modalCheckin.value = '';
+                modalCheckout.value = '';
+            });
+
+            // Show modal
+            $('#addBookingModal').modal('show');
+        }
+
+        // Modify the add booking form submission
+        $('#addBookingModal form').on('submit', function (e) {
+            e.preventDefault();
+
+            const form = $(this);
+            const formData = form.serialize();
+            const submitButton = form.find('button[type="submit"]');
+
+            // Disable submit button to prevent double submission
+            submitButton.prop('disabled', true);
+
+            // Clear previous alerts
+            $('#addBookingModal .alert').remove();
+
+            $.ajax({
+                url: 'admin.php',
+                method: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        // Show success message and close modal after delay
+                        $('#addBookingModal .modal-body').prepend(
+                            `<div class="alert alert-success">${response.message}</div>`
+                        );
+
+                        setTimeout(function () {
+                            $('#addBookingModal').modal('hide');
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        // Show error message
+                        $('#addBookingModal .modal-body').prepend(
+                            `<div class="alert alert-danger">${response.error}</div>`
+                        );
+
+                        // Re-enable submit button
+                        submitButton.prop('disabled', false);
+
+                        // Scroll to error
+                        $('html, body').animate({
+                            scrollTop: $('#addBookingModal .alert').offset().top - 20
+                        }, 500);
+                    }
+                },
+                error: function (xhr) {
+                    let errorMsg = 'An error occurred while processing your request.';
+
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.error) {
+                            errorMsg = response.error;
+                        }
+                    } catch (e) {
+                        errorMsg = xhr.responseText || 'Unknown error occurred.';
+                    }
+
+                    // Show error message
+                    $('#addBookingModal .modal-body').prepend(
+                        `<div class="alert alert-danger">${errorMsg}</div>`
+                    );
+
+                    // Re-enable submit button
+                    submitButton.prop('disabled', false);
+
+                    // Scroll to error
+                    $('html, body').animate({
+                        scrollTop: $('#addBookingModal .alert').offset().top - 20
+                    }, 500);
+                }
+            });
+        });
+
+        // Similar update for edit booking form
+        $('#editBookingModal form').on('submit', function (e) {
+            e.preventDefault();
+
+            const form = $(this);
+            const formData = form.serialize();
+            const submitButton = form.find('button[type="submit"]');
+
+            submitButton.prop('disabled', true);
+            $('#editBookingModal .alert').remove();
+
+            $.ajax({
+                url: 'admin.php',
+                method: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        $('#editBookingModal .modal-body').prepend(
+                            `<div class="alert alert-success">${response.message}</div>`
+                        );
+
+                        setTimeout(function () {
+                            $('#editBookingModal').modal('hide');
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        $('#editBookingModal .modal-body').prepend(
+                            `<div class="alert alert-danger">${response.error}</div>`
+                        );
+                        submitButton.prop('disabled', false);
+
+                        $('html, body').animate({
+                            scrollTop: $('#editBookingModal .alert').offset().top - 20
+                        }, 500);
+                    }
+                },
+                error: function (xhr) {
+                    let errorMsg = 'An error occurred while processing your request.';
+
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.error) {
+                            errorMsg = response.error;
+                        }
+                    } catch (e) {
+                        errorMsg = xhr.responseText || 'Unknown error occurred.';
+                    }
+
+                    $('#editBookingModal .modal-body').prepend(
+                        `<div class="alert alert-danger">${errorMsg}</div>`
+                    );
+
+                    submitButton.prop('disabled', false);
+
+                    $('html, body').animate({
+                        scrollTop: $('#editBookingModal .alert').offset().top - 20
+                    }, 500);
+                }
+            });
+        });
     </script>
+
 </body>
+
 </html>
