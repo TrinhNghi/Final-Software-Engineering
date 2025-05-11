@@ -54,14 +54,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         // Check date conflict
                         $stmt = $pdo->prepare('
-            SELECT COUNT(*) FROM reservation
-            WHERE room_id = ? AND status != "cancelled"
-            AND (
-                (checkin_date <= ? AND checkout_date > ?)
-                OR (checkin_date < ? AND checkout_date >= ?)
-                OR (checkin_date >= ? AND checkout_date <= ?)
-            )
-        ');
+                            SELECT COUNT(*) FROM reservation
+                            WHERE room_id = ? AND status != "cancelled"
+                            AND (
+                                (checkin_date <= ? AND checkout_date > ?)
+                                OR (checkin_date < ? AND checkout_date >= ?)
+                                OR (checkin_date >= ? AND checkout_date <= ?)
+                            )
+                        ');
                         $stmt->execute([
                             $room_id,
                             $checkin_date,
@@ -79,8 +79,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt = $pdo->prepare('SELECT price FROM rooms WHERE id = ?');
                         $stmt->execute([$room_id]);
                         $room = $stmt->fetch();
-                        if (!$room)
+                        if (!$room) {
                             throw new Exception('Room not found.');
+                        }
 
                         $days = (strtotime($checkout_date) - strtotime($checkin_date)) / 86400;
                         $total = $room['price'] * $days;
@@ -101,9 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         // Insert booking
                         $stmt = $pdo->prepare('
-            INSERT INTO reservation (user_id, room_id, checkin_date, checkout_date, status, payment_status, total_amount)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ');
+                            INSERT INTO reservation (user_id, room_id, checkin_date, checkout_date, status, payment_status, total_amount)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ');
                         $stmt->execute([$user_id, $room_id, $checkin_date, $checkout_date, $status, $payment_status, $total]);
 
                         // Return JSON response for AJAX
@@ -117,7 +118,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         exit();
                     }
                     break;
-
 
                 case 'edit_booking':
                     try {
@@ -140,17 +140,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             throw new Exception('Invalid payment status.');
                         }
 
-                        // Verify room exists
-                        $stmt = $pdo->prepare('SELECT COUNT(*) FROM rooms WHERE id = ?');
+                        // Verify room exists and get price
+                        $stmt = $pdo->prepare('SELECT price FROM rooms WHERE id = ?');
                         $stmt->execute([$room_id]);
-                        if ($stmt->fetchColumn() == 0) {
+                        $room = $stmt->fetch(PDO::FETCH_ASSOC);
+                        if (!$room) {
                             throw new Exception('Invalid room selected.');
                         }
 
                         // Verify user exists and get balance
                         $stmt = $pdo->prepare('SELECT balance FROM account WHERE id = ?');
                         $stmt->execute([$user_id]);
-                        $user = $stmt->fetch();
+                        $user = $stmt->fetch(PDO::FETCH_ASSOC);
                         if (!$user) {
                             throw new Exception('Invalid user selected.');
                         }
@@ -160,16 +161,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         // Check room availability (excluding current reservation)
                         $stmt = $pdo->prepare('
-            SELECT COUNT(*) FROM reservation
-            WHERE room_id = ? 
-            AND id != ?
-            AND status != "cancelled"
-            AND (
-                (checkin_date <= ? AND checkout_date > ?)
-                OR (checkin_date < ? AND checkout_date >= ?)
-                OR (checkin_date >= ? AND checkout_date <= ?)
-            )
-        ');
+                            SELECT COUNT(*) FROM reservation
+                            WHERE room_id = ? 
+                            AND id != ?
+                            AND status != "cancelled"
+                            AND (
+                                (checkin_date <= ? AND checkout_date > ?)
+                                OR (checkin_date < ? AND checkout_date >= ?)
+                                OR (checkin_date >= ? AND checkout_date <= ?)
+                            )
+                        ');
                         $stmt->execute([
                             $room_id,
                             $reservation_id,
@@ -185,40 +186,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             throw new Exception('Room is already booked for the selected dates.');
                         }
 
+                        // Calculate room cost
+                        $days = (strtotime($checkout_date) - strtotime($checkin_date)) / 86400;
+                        $room_cost = $room['price'] * $days;
+
+                        // Fetch approved service costs
+                        $stmt = $pdo->prepare('
+                            SELECT COALESCE(SUM(s.price), 0) AS service_total
+                            FROM request req
+                            JOIN service s ON req.service_id = s.id
+                            WHERE req.reservation_id = ? AND req.status = "approved"
+                        ');
+                        $stmt->execute([$reservation_id]);
+                        $service_total = $stmt->fetch(PDO::FETCH_ASSOC)['service_total'];
+
+                        // Calculate total amount
+                        $total_amount = $room_cost + $service_total;
+
                         // Handle payment for checked_out status
                         if ($status === 'checked_out' && $payment_status === 'paid') {
-                            // Get reservation total amount
-                            $stmt = $pdo->prepare('SELECT total_amount FROM reservation WHERE id = ?');
-                            $stmt->execute([$reservation_id]);
-                            $reservation = $stmt->fetch();
-
-                            if (!$reservation) {
-                                throw new Exception('Reservation not found.');
-                            }
-
-                            $amount = $reservation['total_amount'];
-                            $balance = $user['balance'];
-
-                            if ($balance < $amount) {
+                            if ($user['balance'] < $total_amount) {
                                 throw new Exception(
                                     'Insufficient balance for payment. ' .
-                                    'Balance: $' . number_format($balance, 2) . ', ' .
-                                    'Required: $' . number_format($amount, 2)
+                                    'Balance: $' . number_format($user['balance'], 2) . ', ' .
+                                    'Required: $' . number_format($total_amount, 2)
                                 );
                             }
 
-                            // Process payment
+                            // Deduct balance
                             $stmt = $pdo->prepare('UPDATE account SET balance = balance - ? WHERE id = ?');
-                            $stmt->execute([$amount, $user_id]);
+                            $stmt->execute([$total_amount, $user_id]);
                         }
 
                         // Update reservation
                         $stmt = $pdo->prepare('
-            UPDATE reservation
-            SET room_id = ?, checkin_date = ?, checkout_date = ?, status = ?, payment_status = ?
-            WHERE id = ?
-        ');
-                        $stmt->execute([$room_id, $checkin_date, $checkout_date, $status, $payment_status, $reservation_id]);
+                            UPDATE reservation
+                            SET room_id = ?, checkin_date = ?, checkout_date = ?, status = ?, payment_status = ?, total_amount = ?
+                            WHERE id = ?
+                        ');
+                        $stmt->execute([$room_id, $checkin_date, $checkout_date, $status, $payment_status, $total_amount, $reservation_id]);
 
                         // Commit transaction
                         $pdo->commit();
@@ -227,13 +233,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         header('Content-Type: application/json');
                         echo json_encode(['success' => true, 'message' => 'Booking updated successfully.']);
                         exit();
-
                     } catch (Exception $e) {
-                        // Rollback transaction if it was started
                         if ($pdo->inTransaction()) {
                             $pdo->rollBack();
                         }
-
                         header('Content-Type: application/json');
                         http_response_code(400);
                         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
@@ -289,7 +292,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $message = 'Request approved and reservation amount updated successfully.';
                         $message_type = 'success';
                     } catch (Exception $e) {
-                        // Rollback transaction
                         $pdo->rollBack();
                         throw new Exception('Failed to approve request: ' . $e->getMessage());
                     }
@@ -361,11 +363,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $message = 'Check-out confirmed successfully.';
                         $message_type = 'success';
                     } catch (Exception $e) {
-                        // Rollback transaction
                         $pdo->rollBack();
                         throw $e;
                     }
                     break;
+
                 case 'add_staff':
                     $firstname = trim($_POST['firstname']);
                     $lastname = trim($_POST['lastname']);
@@ -400,9 +402,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     try {
                         // Insert staff
                         $stmt = $pdo->prepare('
-                                INSERT INTO staff (firstname, lastname, email, phone, role)
-                                VALUES (?, ?, ?, ?, ?)
-                            ');
+                            INSERT INTO staff (firstname, lastname, email, phone, role)
+                            VALUES (?, ?, ?, ?, ?)
+                        ');
                         $stmt->execute([$firstname, $lastname, $email, $phone ?: null, $role]);
 
                         // Commit transaction
@@ -410,7 +412,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $message = 'Staff added successfully.';
                         $message_type = 'success';
                     } catch (Exception $e) {
-                        // Rollback transaction
                         $pdo->rollBack();
                         throw new Exception('Failed to add staff: ' . $e->getMessage());
                     }
@@ -750,28 +751,27 @@ switch ($section) {
         break;
     case 'manageStaff':
         $content = '
-                <h2>Manage Staff</h2>
-                <p>View, add, edit, or remove staff members.</p>
-                <button class="btn btn-primary mb-3" data-toggle="modal" data-target="#addStaffModal">Add New Staff</button>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Role</th>
-                            <th>Created At</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ' . getStaff($pdo) . '
-                    </tbody>
-                </table>
-            ';
+            <h2>Manage Staff</h2>
+            <p>View, add, edit, or remove staff members.</p>
+            <button class="btn btn-primary mb-3" data-toggle="modal" data-target="#addStaffModal">Add New Staff</button>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Role</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ' . getStaff($pdo) . '
+                </tbody>
+            </table>
+        ';
         break;
-
     case 'manageService':
         $content = '
             <h2>Manage Service Requests</h2>
@@ -970,7 +970,6 @@ switch ($section) {
             padding: 15px;
         }
 
-        /* Add this to your existing CSS */
         .modal .alert {
             margin-bottom: 20px;
             animation: fadeIn 0.3s ease-in-out;
@@ -1037,7 +1036,7 @@ switch ($section) {
             <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
                 <?php echo htmlspecialchars($message); ?>
                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">×</span>
+                    <span aria-hidden="true">&times;</span>
                 </button>
             </div>
         <?php endif; ?>
@@ -1052,7 +1051,7 @@ switch ($section) {
                     <div class="modal-header">
                         <h5 class="modal-title">Add New Booking</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">×</span>
+                            <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                     <div class="modal-body">
@@ -1076,8 +1075,7 @@ switch ($section) {
                         </div>
                         <div class="form-group">
                             <label for="add_checkout_date">Check-Out Date</label>
-                            <input type="date" class="form-control" name="checkout_date" id="add_checkout_date"
-                                required>
+                            <input type="date" class="form-control" name="checkout_date" id="add_checkout_date" required>
                         </div>
                         <div class="form-group">
                             <label for="add_status">Status</label>
@@ -1104,59 +1102,59 @@ switch ($section) {
     <!-- Edit Booking Modal -->
     <div class="modal fade" id="editBookingModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <form method="POST">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Edit Booking</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">×</span>
-                        </button>
+        <div class="modal-content">
+            <form method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Booking</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="editBookingAlerts"></div>
+                    <input type="hidden" name="action" value="edit_booking">
+                    <input type="hidden" name="reservation_id" id="edit_reservation_id">
+                    <input type="hidden" name="user_id" id="edit_user_id">
+                    <div class="form-group">
+                        <label for="edit_room_id">Room</label>
+                        <select class="form-control" name="room_id" id="edit_room_id">
+                            <?php echo getRoomsOptions($pdo, 0); ?>
+                        </select>
                     </div>
-                    <div class="modal-body">
-                        <div id="addBookingAlerts"></div>
-                        <input type="hidden" name="action" value="edit_booking">
-                        <input type="hidden" name="reservation_id" id="edit_reservation_id">
-                        <input type="hidden" name="user_id" id="edit_user_id">
-                        <div class="form-group">
-                            <label for="edit_room_id">Room</label>
-                            <select class="form-control" name="room_id" id="edit_room_id">
-                                <?php echo getRoomsOptions($pdo, 0); ?>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="edit_checkin_date">Check-In Date</label>
-                            <input type="date" class="form-control" name="checkin_date" id="edit_checkin_date" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="edit_checkout_date">Check-Out Date</label>
-                            <input type="date" class="form-control" name="checkout_date" id="edit_checkout_date"
-                                required>
-                        </div>
-                        <div class="form-group">
-                            <label for="edit_status">Status</label>
-                            <select class="form-control" name="status" id="edit_status">
-                                <option value="pending">Pending</option>
-                                <option value="checked_in">Checked In</option>
-                                <option value="checked_out">Checked Out</option>
-                                <option value="cancelled">Cancelled</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="edit_payment_status">Payment Status</label>
-                            <select class="form-control" name="payment_status" id="edit_payment_status">
-                                <option value="unpaid">Unpaid</option>
-                                <option value="paid">Paid</option>
-                            </select>
-                        </div>
+                    <div class="form-group">
+                        <label for="edit_checkin_date">Check-In Date</label>
+                        <input type="date" class="form-control" name="checkin_date" id="edit_checkin_date" required>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <div class="form-group">
+                        <label for="edit_checkout_date">Check-Out Date</label>
+                        <input type="date" class="form-control" name="checkout_date" id="edit_checkout_date" required>
                     </div>
-                </form>
-            </div>
+                    <div class="form-group">
+                        <label for="edit_status">Status</label>
+                        <select class="form-control" name="status" id="edit_status">
+                            <option value="pending">Pending</option>
+                            <option value="checked_in">Checked In</option>
+                            <option value="checked_out">Checked Out</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_payment_status">Payment Status</label>
+                        <select class="form-control" name="payment_status" id="edit_payment_status">
+                            <option value="unpaid">Unpaid</option>
+                            <option value="paid">Paid</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
+
 
     <!-- Add Staff Modal -->
     <div class="modal fade" id="addStaffModal" tabindex="-1" role="dialog" aria-labelledby="addStaffModalLabel"
@@ -1216,7 +1214,7 @@ switch ($section) {
                     <div class="modal-header">
                         <h5 class="modal-title">Edit Staff</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">×</span>
+                            <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                     <div class="modal-body">
@@ -1628,7 +1626,5 @@ switch ($section) {
             });
         });
     </script>
-
 </body>
-
 </html>
