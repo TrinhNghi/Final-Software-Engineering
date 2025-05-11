@@ -65,43 +65,42 @@ session_start();
         ↑
     </button>
     <nav class="navbar navbar-expand-lg navbar-light bg-light"
-        style="padding: 20px; width: 100%; position: fixed; opacity: 0.9; z-index: 1000; height: 50px;">
+        style="padding: 20px; width: 100%; position: fixed; opacity: 0.9; z-index: 1000;">
         <div class="container-fluid">
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo03"
                 aria-controls="navbarTogglerDemo03" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <a class="navbar-brand" href="index.php"
-                style="text-align: center; margin-bottom: 5px; padding-left: 100px; padding-right: 150px;">
-                <i class="material-icons"
-                    style="font-size: 30px; color:  #c68c53; text-align: center;padding: 5px;vertical-align: text-bottom;">hotel</i>
-                HOTEL MANAGEMENT SYSTEM
+            <a class="navbar-brand" href="index.php" style="font-weight: bold; color: #6a1000;">
+                <i class="material-icons" style="font-size: 30px; color: #6a1000; vertical-align: text-bottom;">hotel</i>
+                Peace Home
             </a>
             <div class="collapse navbar-collapse" id="navbarTogglerDemo03">
-                <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
+                <ul class="navbar-nav ml-auto mt-2 mt-lg-0">
                     <li class="nav-item">
-                        <a class="nav-link" href="#introduction" style="color: #c68c53;">About</a>
+                        <a class="nav-link" href="#introduction" style="color: #6a1000;">About</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#footer" style="color: #c68c53;">Contact</a>
+                        <a class="nav-link" href="#footer" style="color: #6a1000;">Contact</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="bookroom.php" style="color: #c68c53;">Book Room</a>
+                        <a class="nav-link" href="bookroom.php" style="color: #6a1000;">Book Room</a>
                     </li>
-                </ul>
-                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="requestservice.php" style="color: #6a1000;">Request Service</a>
+                    </li>
                     <?php if (isset($_SESSION['name'])): ?>
                         <li class="nav-item">
-                            <a class="nav-link" href="userprofile.php" style="color: #c68c53;">
+                            <a class="nav-link" href="profile.php" style="color: #6a1000;">
                                 <i class="fa fa-user-circle" style="font-size: 20px;"></i> Profile
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="logout.php" style="color: #c68c53;">Logout</a>
+                            <a class="nav-link" href="logout.php" style="color: #6a1000;">Logout</a>
                         </li>
                     <?php else: ?>
                         <li class="nav-item">
-                            <a class="nav-link" href="login.php" style="color: #c68c53;">Login</a>
+                            <a class="nav-link" href="login.php" style="color: #6a1000;">Login</a>
                         </li>
                     <?php endif; ?>
                 </ul>
@@ -111,7 +110,7 @@ session_start();
 
     <!-- Static Section -->
     <div class="jumbotron text-overlay"
-        style="background-color: transparent; color: #c68c53 ; text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; padding: 20px;">
+        style="background-color: transparent; color: #6a1000; text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; padding: 20px;">
         <h1 class="display-3" style="font-family: 'Playfair Display', serif; font-weight: bold;">
             <b>Peace Home</b>
         </h1>
@@ -121,7 +120,7 @@ session_start();
             Sapa</p>
         <a href="login.php">
             <button class="button1"
-                style="background-color: #c68c53 ; color: white; border: none; padding: 10px 20px; font-size: 1.2rem; border-radius: 10px; transition: 0.3s;">
+                style="background-color: #6a1000; color: white; border: none; padding: 10px 20px; font-size: 1.2rem; border-radius: 10px; transition: 0.3s;">
                 Join Us Today!
             </button>
         </a>
@@ -164,7 +163,7 @@ session_start();
             Peace Home is the place for you!<br>
     </div>
 
-    <div class="row" style="background-color: #c68c53; padding: 60px; width: 100%; margin: 0;">
+    <div class="row" style="background-color: #6a1000; padding: 60px; width: 100%; margin: 0;">
 
         <!-- Room and Services (Carousel) -->
         <div class="column" style="float: left; padding-left: 250px;">
@@ -387,7 +386,7 @@ session_start();
     </div>
 
     <footer
-        style="background-color: #c68c53; font-family: initial; text-align: center; padding: 40px 20px; width: 100%; color: white;"
+        style="background-color: #6a1000; font-family: initial; text-align: center; padding: 40px 20px; width: 100%; color: white;"
         id="footer">
         <h1 style="font-size: 1.8rem; margin-bottom: 20px;">Our Location</h1>
         <p style="margin-bottom: 30px;">Visit us at our location for an unforgettable experience!</p>
@@ -412,8 +411,7 @@ session_start();
                     <h5 style="font-size: 1.2rem; margin-bottom: 10px;">Phone / Zalo / Whatsapp:</h5>
                     <p style="margin: 5px 0;">Ms. Dung: 03 95 31 67 60</p>
                     <p style="margin: 5px 0;">Ms. Thơm: 09 82 89 77 36</p>
-                    <p style="margin-top: 10px;">If we can be of any assistance, please do not hesitate to contact us!
-                    </p>
+                    <p style="margin-top: 10px;">If we can be of any assistance, please do not hesitate to contact us!</p>
                 </div>
 
                 <!-- Map -->

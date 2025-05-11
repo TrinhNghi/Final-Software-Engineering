@@ -85,6 +85,12 @@ $bookingHistory = [
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ml-auto">
                     <li class="nav-item">
+                        <a class="nav-link" href="bookroom.php" style="color: #6a1000;">Book Room</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="requestservice.php" style="color: #6a1000;">Request service</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="userprofile.php" style="color: #6a1000;">
                             <i class="fa fa-user-circle" style="font-size: 20px;"></i> Profile
                         </a>

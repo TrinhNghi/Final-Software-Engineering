@@ -65,6 +65,9 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="bookroom.php" style="color: #6a1000;">Book Room</a>
+                    </li>
                     <?php if (isset($_SESSION['user'])): ?>
                         <li class="nav-item">
                             <a class="nav-link" href="userprofile.php" style="color: #6a1000;">
