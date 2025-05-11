@@ -409,8 +409,8 @@ session_start();
 
                     <!-- Contact Info -->
                     <h5 style="font-size: 1.2rem; margin-bottom: 10px;">Phone / Zalo / Whatsapp:</h5>
-                    <p style="margin: 5px 0;">Ms. Dung: 03 95 31 67 60</p>
-                    <p style="margin: 5px 0;">Ms. Thơm: 09 82 89 77 36</p>
+                    <p style="margin: 5px 0;">Mr. Thịnh: 0942408703</p>
+                    <p style="margin: 5px 0;">Mr. Khang: 0896132306</p>
                     <p style="margin-top: 10px;">If we can be of any assistance, please do not hesitate to contact us!</p>
                 </div>
 
