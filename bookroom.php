@@ -307,6 +307,11 @@ echo '</script>';
         const dd = String(today.getDate()).padStart(2, '0');
         const todayDate = `${yyyy}-${mm}-${dd}`;
 
+        // Calculate the next day for the end date's minimum value
+        const nextDay = new Date(today);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const nextDayFormatted = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`;
+
         // Calculate the max date for the end date (1 year from today)
         const nextYear = new Date(today);
         nextYear.setFullYear(nextYear.getFullYear() + 1);
@@ -316,14 +321,15 @@ echo '</script>';
         const startDateInput = document.getElementById('startDate');
         const endDateInput = document.getElementById('endDate');
 
-        startDateInput.setAttribute('min', todayDate); // Start date must be greater than or equal to today
+        startDateInput.setAttribute('min', todayDate);
+        endDateInput.setAttribute('min', nextDayFormatted); // End date must be at least 1 day after today
         endDateInput.setAttribute('max', maxEndDate); // End date must be within 1 year from today
 
         // Update the end date's min and max attributes dynamically based on the selected start date
         startDateInput.addEventListener('change', function () {
             const selectedStartDate = new Date(startDateInput.value);
 
-            // Ensure the end date is at least 1 day after the start date
+            // Ensure the end date is at least 1 day after the selected start date
             const nextDay = new Date(selectedStartDate);
             nextDay.setDate(nextDay.getDate() + 1);
             const nextDayFormatted = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`;
@@ -335,6 +341,34 @@ echo '</script>';
             // If the current end date is invalid, reset it
             if (new Date(endDateInput.value) < nextDay || new Date(endDateInput.value) > nextYear) {
                 endDateInput.value = '';
+            }
+        });
+
+        // Set constraints on the modal start date and end date inputs
+        const modalStartDateInput = document.getElementById('checkInDate');
+        const modalEndDateInput = document.getElementById('checkOutDate');
+
+        // Set the minimum date for the modal start date and end date
+        modalStartDateInput.setAttribute('min', todayDate);
+        modalEndDateInput.setAttribute('min', nextDayFormatted); // End date must be at least 1 day after today
+        modalEndDateInput.setAttribute('max', maxEndDate); // End date must be within 1 year from today
+
+        // Update the modal end date's min and max attributes dynamically based on the selected modal start date
+        modalStartDateInput.addEventListener('change', function () {
+            const selectedStartDate = new Date(modalStartDateInput.value);
+
+            // Ensure the modal end date is at least 1 day after the modal start date
+            const nextDay = new Date(selectedStartDate);
+            nextDay.setDate(nextDay.getDate() + 1);
+            const nextDayFormatted = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`;
+
+            // Update the min and max for the modal end date
+            modalEndDateInput.setAttribute('min', nextDayFormatted); // End date must be at least 1 day after the start date
+            modalEndDateInput.setAttribute('max', maxEndDate); // End date must still be within 1 year from today
+
+            // If the current modal end date is invalid, reset it
+            if (new Date(modalEndDateInput.value) < nextDay || new Date(modalEndDateInput.value) > nextYear) {
+                modalEndDateInput.value = '';
             }
         });
 
