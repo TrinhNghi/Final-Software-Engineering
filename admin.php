@@ -76,14 +76,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
 
                         // Calculate total amount
-                        $stmt = $pdo->prepare('SELECT price_per_day FROM rooms WHERE id = ?');
+                        $stmt = $pdo->prepare('SELECT price FROM rooms WHERE id = ?');
                         $stmt->execute([$room_id]);
                         $room = $stmt->fetch();
                         if (!$room)
                             throw new Exception('Room not found.');
 
                         $days = (strtotime($checkout_date) - strtotime($checkin_date)) / 86400;
-                        $total = $room['price_per_day'] * $days;
+                        $total = $room['price'] * $days;
 
                         // Check payment if status is checked_out and marked as paid
                         if ($status === 'checked_out' && $payment_status === 'paid') {
@@ -109,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Return JSON response for AJAX
                         header('Content-Type: application/json');
                         echo json_encode(['success' => true, 'message' => 'Booking added successfully.']);
+                        exit();
                     } catch (Exception $e) {
                         header('Content-Type: application/json');
                         http_response_code(400);
@@ -119,44 +120,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
                 case 'edit_booking':
-                    $reservation_id = (int) $_POST['reservation_id'];
-                    $room_id = (int) $_POST['room_id'];
-                    $checkin_date = date('Y-m-d', strtotime($_POST['checkin_date']));
-                    $checkout_date = date('Y-m-d', strtotime($_POST['checkout_date']));
-                    $status = $_POST['status'];
-                    $payment_status = $_POST['payment_status'];
-                    $user_id = (int) $_POST['user_id'];
-
-                    // Validate inputs
-                    if (strtotime($checkin_date) >= strtotime($checkout_date)) {
-                        throw new Exception('Check-out date must be after check-in date.');
-                    }
-                    if (!in_array($status, ['pending', 'checked_in', 'checked_out', 'cancelled'])) {
-                        throw new Exception('Invalid status.');
-                    }
-                    if (!in_array($payment_status, ['unpaid', 'paid'])) {
-                        throw new Exception('Invalid payment status.');
-                    }
-
-                    // Verify room exists
-                    $stmt = $pdo->prepare('SELECT COUNT(*) FROM rooms WHERE id = ?');
-                    $stmt->execute([$room_id]);
-                    if ($stmt->fetchColumn() == 0) {
-                        throw new Exception('Invalid room selected.');
-                    }
-
-                    // Verify user exists and get balance
-                    $stmt = $pdo->prepare('SELECT balance FROM account WHERE id = ?');
-                    $stmt->execute([$user_id]);
-                    $user = $stmt->fetch();
-                    if (!$user) {
-                        throw new Exception('Invalid user selected.');
-                    }
-
-                    // Start transaction
-                    $pdo->beginTransaction();
-
                     try {
+                        $reservation_id = (int) $_POST['reservation_id'];
+                        $room_id = (int) $_POST['room_id'];
+                        $checkin_date = date('Y-m-d', strtotime($_POST['checkin_date']));
+                        $checkout_date = date('Y-m-d', strtotime($_POST['checkout_date']));
+                        $status = $_POST['status'];
+                        $payment_status = $_POST['payment_status'];
+                        $user_id = (int) $_POST['user_id'];
+
+                        // Validate inputs
+                        if (strtotime($checkin_date) >= strtotime($checkout_date)) {
+                            throw new Exception('Check-out date must be after check-in date.');
+                        }
+                        if (!in_array($status, ['pending', 'checked_in', 'checked_out', 'cancelled'])) {
+                            throw new Exception('Invalid status.');
+                        }
+                        if (!in_array($payment_status, ['unpaid', 'paid'])) {
+                            throw new Exception('Invalid payment status.');
+                        }
+
+                        // Verify room exists
+                        $stmt = $pdo->prepare('SELECT COUNT(*) FROM rooms WHERE id = ?');
+                        $stmt->execute([$room_id]);
+                        if ($stmt->fetchColumn() == 0) {
+                            throw new Exception('Invalid room selected.');
+                        }
+
+                        // Verify user exists and get balance
+                        $stmt = $pdo->prepare('SELECT balance FROM account WHERE id = ?');
+                        $stmt->execute([$user_id]);
+                        $user = $stmt->fetch();
+                        if (!$user) {
+                            throw new Exception('Invalid user selected.');
+                        }
+
+                        // Start transaction
+                        $pdo->beginTransaction();
+
                         // Check room availability (excluding current reservation)
                         $stmt = $pdo->prepare('
             SELECT COUNT(*) FROM reservation
@@ -221,12 +222,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         // Commit transaction
                         $pdo->commit();
-                        $message = 'Booking updated successfully.';
-                        $message_type = 'success';
+
+                        // Return JSON response for AJAX
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true, 'message' => 'Booking updated successfully.']);
+                        exit();
+
                     } catch (Exception $e) {
-                        // Rollback transaction
-                        $pdo->rollBack();
-                        throw new Exception('Failed to update booking: ' . $e->getMessage());
+                        // Rollback transaction if it was started
+                        if ($pdo->inTransaction()) {
+                            $pdo->rollBack();
+                        }
+
+                        header('Content-Type: application/json');
+                        http_response_code(400);
+                        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                        exit();
                     }
                     break;
 
