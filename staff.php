@@ -446,7 +446,7 @@ switch ($section) {
         $content = '
             <h2>Manage Booking</h2>
             <p>View, edit, or cancel bookings.</p>
-            <button class="btn btn-primary mb-3" data-toggle="modal" data-target="#addBookingModal">Add New Booking</button>
+            <button class="btn btn-primary mb-3" onclick="setupAddBookingModal()">Add New Booking</button>
             <table class="table table-bordered">
                 <thead>
                     <tr>
