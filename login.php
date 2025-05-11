@@ -43,8 +43,10 @@
                 $data = $result['data'];
                 // Set session variables
             $_SESSION['user_id'] = $data['id'];  // Store numeric ID for database relations
+            $_SESSION['user'] = $user;
             $_SESSION['username'] = $data['username'];  // Store username separately
             $_SESSION['name'] = $data['firstname'].' '.$data['lastname'];
+            $_SESSION['role'] = $data['authorize'];
             session_regenerate_id(true);  // Prevent session fixation
 
                 if (isset($_POST['remember'])) {
