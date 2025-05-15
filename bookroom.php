@@ -484,11 +484,11 @@ echo '</script>';
                         let cheapestTotalCost = 0;
 
                         cheapestCombinations.forEach((room, index) => {
-                            modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.room_name} (Capacity: ${room.max_people}) - $${room.price.toFixed(2)}</li>`;
+                            modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.room_name} (Capacity: ${room.max_people}) - ${room.price.toFixed(2)} VND</li>`;
                             cheapestTotalCost += room.price;
                         });
 
-                        modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> $${cheapestTotalCost.toFixed(2)}</p>`;
+                        modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> ${cheapestTotalCost.toFixed(2)} VND</p>`;
                         modalHtml += `<button class="btn btn-success mt-2" onclick='bookRooms(${JSON.stringify(cheapestCombinations)})'>Book Cheapest</button>`;
 
                         // Create HTML for Normal Combination
@@ -496,11 +496,11 @@ echo '</script>';
                         let normalTotalCost = 0;
 
                         normalCombinations.forEach((room, index) => {
-                            modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.room_name} (Capacity: ${room.max_people}) - $${room.price.toFixed(2)}</li>`;
+                            modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.room_name} (Capacity: ${room.max_people}) - ${room.price.toFixed(2)} VND</li>`;
                             normalTotalCost += room.price;
                         });
 
-                        modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> $${normalTotalCost.toFixed(2)}</p>`;
+                        modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> ${normalTotalCost.toFixed(2)} VND</p>`;
                         modalHtml += `<button class="btn btn-primary mt-2" onclick='bookRooms(${JSON.stringify(normalCombinations)})'>Book Normal</button>`;
 
                         // Show in modal
@@ -642,7 +642,7 @@ echo '</script>';
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        alert('Bookings confirmed! Total cost: $' + data.total_cost);
+                        alert('Bookings confirmed! Total cost: ' + data.total_cost +' VND');
                         $('#searchResultsModal').modal('hide');
                         // Optionally refresh the page or update UI
                     } else {
