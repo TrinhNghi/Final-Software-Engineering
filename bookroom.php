@@ -642,7 +642,7 @@ echo '</script>';
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        alert('Bookings confirmed! Total cost: $' + data.total_cost);
+                        alert('Bookings confirmed! Total cost: ' + data.total_cost) +' VND';
                         $('#searchResultsModal').modal('hide');
                         // Optionally refresh the page or update UI
                     } else {
