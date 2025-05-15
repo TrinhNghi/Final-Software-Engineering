@@ -488,7 +488,7 @@ echo '</script>';
                             cheapestTotalCost += room.price;
                         });
 
-                        modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> ${cheapestTotalCost} VND</p>`;
+                        modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost a day:</strong> ${cheapestTotalCost} VND</p>`;
                         modalHtml += `<button class="btn btn-success mt-2" onclick='bookRooms(${JSON.stringify(cheapestCombinations)})'>Book Cheapest</button>`;
 
                         // Create HTML for Normal Combination
@@ -496,11 +496,11 @@ echo '</script>';
                         let normalTotalCost = 0;
 
                         normalCombinations.forEach((room, index) => {
-                            modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.room_name} (Capacity: ${room.max_people}) - ${room.price} VND}</li>`;
+                            modalHtml += `<li class="list-group-item">Room ${index + 1}: ${room.room_name} (Capacity: ${room.max_people}) - ${room.price} VND</li>`;
                             normalTotalCost += room.price;
                         });
 
-                        modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost:</strong> ${normalTotalCost} VND</p>`;
+                        modalHtml += `</ul><p class="mt-3"><strong>Total Estimated Cost a day:</strong> ${normalTotalCost} VND</p>`;
                         modalHtml += `<button class="btn btn-primary mt-2" onclick='bookRooms(${JSON.stringify(normalCombinations)})'>Book Normal</button>`;
 
                         // Show in modal
@@ -642,7 +642,7 @@ echo '</script>';
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        alert('Bookings confirmed! Total cost: ' + data.total_cost) +' VND';
+                        alert('Bookings confirmed! Total cost: ' + data.total_cost +' VND');
                         $('#searchResultsModal').modal('hide');
                         // Optionally refresh the page or update UI
                     } else {
